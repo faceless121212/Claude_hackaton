@@ -1,10 +1,10 @@
 import { COURSES, CATEGORIES, PATHS, FEATURED_COURSE_ID, getCourse, findLesson, courseStats } from './data/index.js';
 import * as progress from './progress.js';
 
-// Courses + levels for Lemma. Lemma's own screens render straight into #app; ours render into a
-// shadow root inside it, so the two stylesheets can never collide. `window.Lemma` is the bridge
+// Courses + levels for Solva. Solva's own screens render straight into #app; ours render into a
+// shadow root inside it, so the two stylesheets can never collide. `window.Solva` is the bridge
 // exported at the bottom of public/app.js.
-const lemma = window.Lemma;
+const solva = window.Solva;
 const outer = document.getElementById('app');
 const sheet = new CSSStyleSheet();
 sheet.replaceSync(await (await fetch(new URL('./courses.css', import.meta.url))).text());
@@ -18,12 +18,12 @@ function shadowFor(host) {
   return shadow;
 }
 
-/** Build the page frame: Lemma's nav on top (unless full-screen), our screen below. */
+/** Build the page frame: Solva's nav on top (unless full-screen), our screen below. */
 function frame(fullscreen) {
-  const tutor = lemma.S.profile?.tutor || 'nova';
+  const tutor = solva.S.profile?.tutor || 'nova';
   outer.innerHTML = fullscreen
     ? '<div id="courses-host" style="flex:1;display:flex;flex-direction:column"></div>'
-    : `<div class="wrap t-${tutor}">${lemma.nav()}<div id="courses-host"></div></div>`;
+    : `<div class="wrap t-${tutor}">${solva.nav()}<div id="courses-host"></div></div>`;
   const shadow = shadowFor(outer.querySelector('#courses-host'));
   shadow.innerHTML = `<div class="sk ${fullscreen ? 'sk-full' : ''}">${fullscreen ? '' : '<nav class="subbar"></nav>'}<main id="view"></main></div>`;
   app = shadow.querySelector('#view');
@@ -439,7 +439,7 @@ function showResults(course, lesson, r) {
     <div class="lesson results" style="--c:${course.color}">
       <div class="confetti" aria-hidden="true">${Array.from({ length: 28 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${(i % 7) * 0.12}s;--h:${(i * 47) % 360}"></i>`).join('')}</div>
       <div class="results-card">
-        <div class="results-emoji">${lemma.S.profile ? `<img src="${lemma.pic('cheer')}" alt="${esc(lemma.T().name)} cheering">` : emoji}</div>
+        <div class="results-emoji">${solva.S.profile ? `<img src="${solva.pic('cheer')}" alt="${esc(solva.T().name)} cheering">` : emoji}</div>
         <h1>${headline}</h1>
         <p>${esc(lesson.title)}${r.firstTime ? '' : ' · practice round'}</p>
         <div class="result-stats">
@@ -458,7 +458,7 @@ function showResults(course, lesson, r) {
         </div>
       </div>
     </div>`;
-  if (r.leveledUp || r.levelCompleted) lemma.confetti();
+  if (r.leveledUp || r.levelCompleted) solva.confetti();
   app.querySelector('#next').focus();
 }
 
@@ -523,7 +523,7 @@ function renderNotFound() {
   app.innerHTML = '<div class="page"><p class="empty">We couldn’t find that page. <a href="#/courses">Back to courses →</a></p></div>';
 }
 
-// ---- Lemma home: "continue learning" + level card --------------------------------
+// ---- Solva home: "continue learning" + level card --------------------------------
 
 function homeCard(slot) {
   if (!slot) return;
@@ -532,7 +532,7 @@ function homeCard(slot) {
 
 // ---- router -----------------------------------------------------------------
 // Our screens live under #/courses, #/course/:id, #/lesson/:course/:lesson and #/levels.
-// Any other hash hands the page back to Lemma.
+// Any other hash hands the page back to Solva.
 
 const VIEWS = ['courses', 'course', 'lesson', 'levels'];
 let active = false;
@@ -541,7 +541,7 @@ function route() {
   player = null;
   const [, view, a, b] = location.hash.replace(/^#/, '').split('/');
   if (!VIEWS.includes(view)) {
-    if (active) { active = false; lemma.S.profile ? lemma.home() : lemma.landing(); window.scrollTo(0, 0); }
+    if (active) { active = false; solva.S.profile ? solva.home() : solva.landing(); window.scrollTo(0, 0); }
     return;
   }
   active = true;
@@ -568,7 +568,7 @@ document.addEventListener('keydown', (e) => {
 window.addEventListener('hashchange', route);
 progress.subscribe(renderTopbar);
 
-// Public API for the rest of Lemma.
+// Public API for the rest of Solva.
 window.Courses = { homeCard, progress, courses: COURSES, getCourse };
 homeCard(document.querySelector('#courses-slot'));
 route();

@@ -1,4 +1,4 @@
-// Lemma — zero-dependency server. Serves ./public and proxies chat to Claude via fal's OpenRouter endpoint.
+// Solva — zero-dependency server. Serves ./public and proxies chat to Claude via fal's OpenRouter endpoint.
 const http = require('http'), fs = require('fs'), path = require('path');
 
 // Minimal .env loader (FAL_KEY=..., MODEL=..., PORT=...)
@@ -105,4 +105,4 @@ http.createServer((req, res) => {
 }).on('error', e => {
   console.error(e.code === 'EADDRINUSE' ? `Port ${PORT} is already in use. Close the other program or run with PORT=3001.` : e.message);
   process.exit(1);
-}).listen(PORT, () => { if (!KEY && !ANTHROPIC_KEY) console.warn('WARNING: no API key found. Copy .env.example to .env and add FAL_KEY.'); console.log(`Lemma running at http://localhost:${PORT}  (${ANTHROPIC_KEY ? 'Claude direct: ' + ANTHROPIC_MODEL : 'Claude via fal: ' + MODEL})`); });
+}).listen(PORT, () => { if (!KEY && !ANTHROPIC_KEY) console.warn('WARNING: no API key found. Copy .env.example to .env and add FAL_KEY.'); console.log(`Solva running at http://localhost:${PORT}  (${ANTHROPIC_KEY ? 'Claude direct: ' + ANTHROPIC_MODEL : 'Claude via fal: ' + MODEL})`); });
