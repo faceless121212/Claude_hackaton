@@ -1,8 +1,37 @@
 import { COURSES, CATEGORIES, PATHS, FEATURED_COURSE_ID, getCourse, findLesson, courseStats } from './data/index.js';
 import * as progress from './progress.js';
 
-const app = document.getElementById('app');
-const topbar = document.getElementById('topbar');
+// Courses + levels for Lemma. Lemma's own screens render straight into #app; ours render into a
+// shadow root inside it, so the two stylesheets can never collide. `window.Lemma` is the bridge
+// exported at the bottom of public/app.js.
+const lemma = window.Lemma;
+const outer = document.getElementById('app');
+const sheet = new CSSStyleSheet();
+sheet.replaceSync(await (await fetch(new URL('./courses.css', import.meta.url))).text());
+
+let app = null;     // <main> inside the shadow root for the current screen
+let topbar = null;  // tab bar above it (absent in full-screen lessons)
+
+function shadowFor(host) {
+  const shadow = host.shadowRoot ?? host.attachShadow({ mode: 'open' });
+  shadow.adoptedStyleSheets = [sheet];
+  return shadow;
+}
+
+/** Build the page frame: Lemma's nav on top (unless full-screen), our screen below. */
+function frame(fullscreen) {
+  const tutor = lemma.S.profile?.tutor || 'nova';
+  outer.innerHTML = fullscreen
+    ? '<div id="courses-host" style="flex:1;display:flex;flex-direction:column"></div>'
+    : `<div class="wrap t-${tutor}">${lemma.nav()}<div id="courses-host"></div></div>`;
+  const shadow = shadowFor(outer.querySelector('#courses-host'));
+  shadow.innerHTML = `<div class="sk ${fullscreen ? 'sk-full' : ''}">${fullscreen ? '' : '<nav class="subbar"></nav>'}<main id="view"></main></div>`;
+  app = shadow.querySelector('#view');
+  topbar = shadow.querySelector('.subbar');
+  const leave = () => { location.hash = '#/'; };
+  outer.querySelectorAll('.logo, .me').forEach((el) => { el.onclick = leave; el.style.cursor = 'pointer'; });
+  outer.querySelector('.pill.courses')?.classList.add('on');
+}
 
 // ---- helpers ----------------------------------------------------------------
 
@@ -23,24 +52,16 @@ const ui = { category: 'all', query: '' };
 // ---- top bar ----------------------------------------------------------------
 
 function renderTopbar() {
+  if (!topbar?.isConnected) return;
   const lvl = progress.levelInfo();
-  const st = progress.streak();
+  const view = location.hash.startsWith('#/levels') ? 'levels' : 'courses';
   topbar.innerHTML = `
-    <a class="brand" href="#/"><span class="brand-mark">⚡</span>Spark</a>
-    <nav class="nav">
-      <a href="#/" data-nav="home">Courses</a>
-      <a href="#/profile" data-nav="profile">Levels</a>
-    </nav>
-    <div class="stats">
-      <span class="stat ${st.activeToday ? 'is-hot' : ''}" title="Day streak">🔥 <b>${st.count}</b></span>
-      <span class="stat" title="Total XP">⚡ <b>${lvl.xp}</b> XP</span>
-      <a class="level-chip" href="#/profile" title="${esc(lvl.title)} — ${lvl.toNext} XP to next level">
-        <span class="ring" style="--pct:${lvl.pct}"><span>${lvl.level}</span></span>
-        <span class="level-chip-text"><b>Level ${lvl.level}</b><small>${esc(lvl.title)}</small></span>
-      </a>
-    </div>`;
-  const route = location.hash.startsWith('#/profile') ? 'profile' : 'home';
-  topbar.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === route));
+    <a class="tab ${view === 'courses' ? 'active' : ''}" href="#/courses">Courses</a>
+    <a class="tab ${view === 'levels' ? 'active' : ''}" href="#/levels">Levels</a>
+    <a class="level-chip" href="#/levels" title="${esc(lvl.title)} — ${lvl.toNext} XP to next level">
+      <span class="ring" style="--pct:${lvl.pct}"><span>${lvl.level}</span></span>
+      <span class="level-chip-text"><b>Level ${lvl.level}</b><small>${esc(lvl.title)}</small></span>
+    </a>`;
 }
 
 // ---- course selection (home) ------------------------------------------------
@@ -61,7 +82,8 @@ function courseCard(course) {
     </a>`;
 }
 
-function continueCard() {
+function continueCard(embed = false) {
+  const allLink = embed ? '<a class="link" href="#/courses">All courses →</a>' : '';
   const course = getCourse(progress.getState().activeCourse);
   const lvl = progress.levelInfo();
   const day = progress.daily();
@@ -90,7 +112,7 @@ function continueCard() {
           <h2>${esc(course.title)}</h2>
           <p>Next up: <b>${esc(p.nextLesson.title)}</b></p>
           ${bar(p.pct, course.color)}
-          <a class="btn btn-primary" href="#/lesson/${course.id}/${p.nextLesson.id}">Continue</a>
+          <div class="cta-row"><a class="btn btn-primary" href="#/lesson/${course.id}/${p.nextLesson.id}">Continue</a>${allLink}</div>
         </div>
       </div>`;
   } else {
@@ -104,7 +126,7 @@ function continueCard() {
           <h2>${esc(featured.title)}</h2>
           <p>${esc(featured.description)}</p>
           <small class="meta">${s.levels} levels · ${s.lessons} lessons · ${s.xp} XP</small>
-          <a class="btn btn-primary" href="#/course/${featured.id}">Start learning</a>
+          <div class="cta-row"><a class="btn btn-primary" href="#/course/${featured.id}">Start learning</a>${allLink}</div>
         </div>
       </div>`;
   }
@@ -173,11 +195,11 @@ function renderHome() {
   app.querySelectorAll('[data-cat]').forEach((btn) => btn.addEventListener('click', () => {
     ui.category = btn.dataset.cat;
     app.querySelectorAll('[data-cat]').forEach((b) => b.classList.toggle('active', b === btn));
-    document.getElementById('catalog').innerHTML = catalogHtml();
+    app.querySelector('#catalog').innerHTML = catalogHtml();
   }));
-  document.getElementById('search').addEventListener('input', (e) => {
+  app.querySelector('#search').addEventListener('input', (e) => {
     ui.query = e.target.value;
-    document.getElementById('catalog').innerHTML = catalogHtml();
+    app.querySelector('#catalog').innerHTML = catalogHtml();
   });
 }
 
@@ -228,7 +250,7 @@ function renderCourse(courseId) {
   app.innerHTML = `
     <div class="page course-page" style="--c:${course.color}">
       <aside class="course-side">
-        <a class="back" href="#/">← All courses</a>
+        <a class="back" href="#/courses">← All courses</a>
         <div class="panel course-info">
           <div class="course-art course-art-lg"><span>${course.icon}</span></div>
           <h1>${esc(course.title)}</h1>
@@ -268,12 +290,11 @@ function renderLesson(courseId, lessonId) {
 
   if (window.LessonPlayer?.start) {
     app.innerHTML = '<div class="page" id="lesson-root"></div>';
-    window.LessonPlayer.start({ course, level, lesson, root: document.getElementById('lesson-root'), onComplete: finish, onExit: exit });
+    window.LessonPlayer.start({ course, level, lesson, root: app.querySelector('#lesson-root'), onComplete: finish, onExit: exit });
     return;
   }
 
   player = { course, lesson, level, idx: 0, mistakes: 0, selected: null, wrong: new Set(), attempts: 0, solved: false, revealed: false, finish };
-  document.body.classList.add('in-lesson');
   drawStep();
 }
 
@@ -317,10 +338,10 @@ function drawStep() {
       </div>
     </div>`;
 
-  const action = document.getElementById('action');
+  const action = app.querySelector('#action');
   action.addEventListener('click', onAction);
   app.querySelectorAll('.option').forEach((btn) => btn.addEventListener('click', () => selectOption(Number(btn.dataset.opt))));
-  const input = document.getElementById('answer');
+  const input = app.querySelector('#answer');
   if (input) {
     input.addEventListener('input', () => { if (!player.solved && !player.revealed) action.disabled = !input.value.trim(); });
     input.focus();
@@ -335,9 +356,9 @@ function selectOption(i) {
     b.classList.toggle('selected', on);
     b.setAttribute('aria-checked', on);
   });
-  document.getElementById('action').disabled = false;
-  document.getElementById('feedback').innerHTML = '';
-  document.getElementById('foot').className = 'lesson-foot';
+  app.querySelector('#action').disabled = false;
+  app.querySelector('#feedback').innerHTML = '';
+  app.querySelector('#foot').className = 'lesson-foot';
 }
 
 function isInputCorrect(step, raw) {
@@ -350,10 +371,10 @@ function onAction() {
   const step = player.lesson.steps[player.idx];
   if (step.type === 'info' || player.solved || player.revealed) return nextStep();
 
-  const foot = document.getElementById('foot');
-  const feedback = document.getElementById('feedback');
-  const action = document.getElementById('action');
-  const input = document.getElementById('answer');
+  const foot = app.querySelector('#foot');
+  const feedback = app.querySelector('#feedback');
+  const action = app.querySelector('#action');
+  const input = app.querySelector('#answer');
   const correct = step.type === 'choice' ? player.selected === step.answer : isInputCorrect(step, input.value);
 
   if (correct) {
@@ -408,7 +429,6 @@ function nextStep() {
 }
 
 function showResults(course, lesson, r) {
-  document.body.classList.add('in-lesson');
   const lvl = progress.levelInfo();
   const st = progress.streak();
   const next = r.nextLesson;
@@ -419,7 +439,7 @@ function showResults(course, lesson, r) {
     <div class="lesson results" style="--c:${course.color}">
       <div class="confetti" aria-hidden="true">${Array.from({ length: 28 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${(i % 7) * 0.12}s;--h:${(i * 47) % 360}"></i>`).join('')}</div>
       <div class="results-card">
-        <div class="results-emoji">${emoji}</div>
+        <div class="results-emoji">${lemma.S.profile ? `<img src="${lemma.pic('cheer')}" alt="${esc(lemma.T().name)} cheering">` : emoji}</div>
         <h1>${headline}</h1>
         <p>${esc(lesson.title)}${r.firstTime ? '' : ' · practice round'}</p>
         <div class="result-stats">
@@ -433,13 +453,13 @@ function showResults(course, lesson, r) {
           <small>${lvl.toNext} XP to Level ${lvl.level + 1}</small>
         </div>
         <div class="result-actions">
-          ${next ? `<a class="btn btn-primary" id="next" href="#/lesson/${course.id}/${next.id}">Next lesson</a>` : `<a class="btn btn-primary" id="next" href="#/">Find a new course</a>`}
+          ${next ? `<a class="btn btn-primary" id="next" href="#/lesson/${course.id}/${next.id}">Next lesson</a>` : `<a class="btn btn-primary" id="next" href="#/courses">Find a new course</a>`}
           <a class="btn btn-ghost" href="#/course/${course.id}">Back to course</a>
         </div>
       </div>
     </div>`;
-  renderTopbar();
-  document.getElementById('next').focus();
+  if (r.leveledUp || r.levelCompleted) lemma.confetti();
+  app.querySelector('#next').focus();
 }
 
 // ---- profile / levels -------------------------------------------------------
@@ -482,7 +502,7 @@ function renderProfile() {
             <a class="mini-course" href="#/course/${c.id}" style="--c:${c.color}">
               <span class="mini-icon">${c.icon}</span>
               <div><b>${esc(c.title)}</b>${bar(p.pct, c.color)}<small>${p.complete ? 'Complete' : `Level ${p.currentLevel} of ${p.levelCount}`} · ${p.done}/${p.total} lessons</small></div>
-            </a>`).join('') : '<p class="empty">No courses started yet. <a href="#/">Pick your first course →</a></p>'}
+            </a>`).join('') : '<p class="empty">No courses started yet. <a href="#/courses">Pick your first course →</a></p>'}
           <h2 class="how-title">How XP works</h2>
           <ul class="how">
             <li>Finish a lesson: <b>10–20 XP</b></li>
@@ -490,39 +510,57 @@ function renderProfile() {
             <li>Replay a lesson: <b>${progress.REPLAY_XP} XP</b></li>
             <li>Finish every lesson in a level to unlock the next one</li>
           </ul>
-          <button class="btn btn-ghost btn-small" id="reset">Reset progress</button>
+          <button class="btn btn-ghost btn-small" id="reset">Reset course progress</button>
         </section>
       </div>
     </div>`;
-  document.getElementById('reset').addEventListener('click', () => {
-    if (confirm('Reset all XP, levels and course progress?')) { progress.reset(); route(); }
+  app.querySelector('#reset').addEventListener('click', () => {
+    if (confirm('Reset your progress in every course? Your XP and streak are kept.')) { progress.reset(); route(); }
   });
 }
 
 function renderNotFound() {
-  app.innerHTML = '<div class="page"><p class="empty">We couldn’t find that page. <a href="#/">Back to courses →</a></p></div>';
+  app.innerHTML = '<div class="page"><p class="empty">We couldn’t find that page. <a href="#/courses">Back to courses →</a></p></div>';
+}
+
+// ---- Lemma home: "continue learning" + level card --------------------------------
+
+function homeCard(slot) {
+  if (!slot) return;
+  shadowFor(slot).innerHTML = `<div class="sk sk-embed">${continueCard(true)}</div>`;
 }
 
 // ---- router -----------------------------------------------------------------
+// Our screens live under #/courses, #/course/:id, #/lesson/:course/:lesson and #/levels.
+// Any other hash hands the page back to Lemma.
+
+const VIEWS = ['courses', 'course', 'lesson', 'levels'];
+let active = false;
 
 function route() {
   player = null;
-  document.body.classList.remove('in-lesson');
   const [, view, a, b] = location.hash.replace(/^#/, '').split('/');
+  if (!VIEWS.includes(view)) {
+    if (active) { active = false; lemma.S.profile ? lemma.home() : lemma.landing(); window.scrollTo(0, 0); }
+    return;
+  }
+  active = true;
+  frame(view === 'lesson');
   if (view === 'course') renderCourse(a);
   else if (view === 'lesson') renderLesson(a, b);
-  else if (view === 'profile') renderProfile();
+  else if (view === 'levels') renderProfile();
   else renderHome();
   renderTopbar();
   if (view !== 'course') window.scrollTo(0, 0);
 }
 
 document.addEventListener('keydown', (e) => {
-  if (!player) return;
+  if (!player || !app?.isConnected) return;
+  const focused = app.getRootNode().activeElement;
   if (e.key === 'Enter') {
-    const action = document.getElementById('action');
-    if (action && !action.disabled && document.activeElement !== action) { e.preventDefault(); action.click(); }
-  } else if (/^[1-9]$/.test(e.key) && document.activeElement?.tagName !== 'INPUT') {
+    const action = app.querySelector('#action');
+    if (action && !action.disabled && focused !== action) { e.preventDefault(); action.click(); }
+  } else if (/^[1-9]$/.test(e.key) && focused?.tagName !== 'INPUT') {
     selectOption(Number(e.key) - 1);
   }
 });
@@ -530,6 +568,7 @@ document.addEventListener('keydown', (e) => {
 window.addEventListener('hashchange', route);
 progress.subscribe(renderTopbar);
 
-// Public API for the other parts of the app.
-window.Spark = { progress, courses: COURSES, getCourse };
+// Public API for the rest of Lemma.
+window.Courses = { homeCard, progress, courses: COURSES, getCourse };
+homeCard(document.querySelector('#courses-slot'));
 route();

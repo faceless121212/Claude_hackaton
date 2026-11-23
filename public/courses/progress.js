@@ -15,6 +15,11 @@ export const LEVEL_TITLES = [
 const listeners = new Set();
 let state = load();
 
+// Inside Lemma, XP and the streak belong to Lemma's own state (window.Lemma.S), so practice,
+// mock exams and course lessons all feed one total. Standalone, we keep our own.
+const lemma = () => globalThis.Lemma;
+export function totalXp() { return lemma() ? lemma().S.xp : state.xp; }
+
 function blank() {
   return { xp: 0, completed: {}, streak: { count: 0, lastDay: null }, daily: { day: null, xp: 0 }, activeCourse: null };
 }
@@ -38,6 +43,7 @@ function dayKey(d = new Date()) {
 
 export function subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 export function getState() { return state; }
+/** Clears course progress (and standalone XP). Lemma's XP and streak are left alone. */
 export function reset() { state = blank(); save(); }
 
 // ---- User level -----------------------------------------------------------
@@ -45,7 +51,7 @@ export function reset() { state = blank(); save(); }
 /** Total XP needed to reach level n (level 1 = 0 XP, 2 = 50, 3 = 150, 4 = 300 ...). */
 export function xpForLevel(n) { return 25 * n * (n - 1); }
 
-export function levelInfo(xp = state.xp) {
+export function levelInfo(xp = totalXp()) {
   let level = 1;
   while (xp >= xpForLevel(level + 1)) level++;
   const base = xpForLevel(level);
@@ -64,6 +70,10 @@ export function levelInfo(xp = state.xp) {
 // ---- Streak & daily goal --------------------------------------------------
 
 export function streak() {
+  if (lemma()) {
+    const { streak: count, lastDay } = lemma().S;
+    return { count, activeToday: lastDay === new Date().toISOString().slice(0, 10) };
+  }
   const { count, lastDay } = state.streak;
   if (!lastDay) return { count: 0, activeToday: false };
   const today = dayKey();
@@ -136,10 +146,16 @@ export function setActiveCourse(courseId) {
 /** Award raw XP (for other features: daily challenges, AI tutor, etc.). */
 export function addXp(amount) {
   const before = levelInfo().level;
-  state.xp += amount;
   const today = dayKey();
   state.daily = { day: today, xp: (state.daily.day === today ? state.daily.xp : 0) + amount };
-  touchStreak();
+  if (lemma()) {
+    lemma().S.xp += amount;
+    lemma().touchStreak();
+    lemma().save();
+  } else {
+    state.xp += amount;
+    touchStreak();
+  }
   save();
   const after = levelInfo().level;
   return { leveledUp: after > before, level: after };
@@ -152,7 +168,7 @@ export function completeLesson(course, lesson, { mistakes = 0 } = {}) {
   const perfect = mistakes === 0;
   const base = firstTime ? lesson.xp ?? 10 : REPLAY_XP;
   const bonus = firstTime && perfect ? PERFECT_BONUS : 0;
-  const xpBefore = state.xp;
+  const xpBefore = totalXp();
 
   if (firstTime) {
     state.completed[course.id] = { ...state.completed[course.id], [lesson.id]: { at: Date.now(), mistakes } };

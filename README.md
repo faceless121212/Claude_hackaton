@@ -1,63 +1,50 @@
-# Spark — learn by doing
+# Lemma
 
-A Brilliant-style learning app. This part covers **course selection** and the **level system**.
+An AI study companion for university math and science. It solves problems with you one hint at a time, and it helps you recover after a bad exam.
 
-## Run
+## What it does
 
-No build step — it is plain HTML/CSS/ES modules. Serve the folder with any static server:
+- **Solve together**: type a problem or send a photo; the tutor gives one step at a time and checks your working.
+- **Bad exam?**: talk through what happened, then get a five-day comeback plan aimed at the marks you lost.
+- **Voice mode**: speak to the tutor and hear replies aloud (Chrome or Edge).
+- **Mock exam**: five questions, six minutes, no hints, then a question-by-question review.
+- **Memory**: the tutor remembers weak topics and past sessions; you can read and erase it on the home screen.
+- **Adaptive practice**: short question sets that get harder or easier as you answer.
+- **Courses and levels**: Brilliant-style courses (How AI Works, Prompting & AI Agents, plus math, computer science, data and science) split into levels that unlock as you go. Lessons earn XP towards your level.
+
+Three mascot tutors (Nova, Max, Ada) share the same model with different personalities.
+
+## Run it
+
+Requires Node.js 18 or newer. There is nothing to install.
 
 ```bash
-npx serve .
+cp .env.example .env
 ```
 
-(Opening `index.html` from disk will not work: browsers block ES modules on `file://`.)
+Put your key in `.env` (either `FAL_KEY`, or `ANTHROPIC_API_KEY` to call Claude directly), then:
 
-## What's here
-
-| File | What it does |
-| --- | --- |
-| `src/app.js` | Screens: course catalog, course page with level path, lesson player, results, levels/profile |
-| `src/progress.js` | Level system: XP, user levels, streak, daily goal, lesson/level unlocks (localStorage) |
-| `src/data/index.js` | Course catalog, categories and learning paths |
-| `src/data/courses/*.js` | Course content — one file per course |
-
-## Courses
-
-- **AI:** How AI Works (5 levels, 15 lessons), Prompting & AI Agents
-- **Math:** Mathematical Thinking, Probability Basics
-- **Computer Science:** Thinking in Code, Algorithm Fundamentals
-- **Data:** Exploring Data
-- **Science:** Scientific Thinking
-
-## Level system
-
-- Each course is split into **levels**; a level unlocks when every lesson in the previous one is done, and lessons unlock in order.
-- Finishing a lesson awards its XP (10–20), **+5** for no mistakes; replaying gives 5 XP.
-- User level `n` needs `25 · n · (n − 1)` total XP (50, 150, 300, 500 …), with titles from Novice to Legend.
-- Any day with XP earned extends the streak; the daily goal is 30 XP.
-
-## Plugging in other features
-
-```js
-const { progress, courses, getCourse } = window.Spark;
-
-progress.addXp(20);                         // award XP from anywhere (daily challenge, AI tutor…)
-progress.levelInfo();                       // { level, title, xp, toNext, pct }
-progress.courseProgress(getCourse('how-ai-works')); // per-level and per-lesson status
-progress.subscribe((state) => { /* re-render on change */ });
+```bash
+npm start
 ```
 
-To swap in a different lesson player, define `window.LessonPlayer` before the app loads:
+Open http://localhost:3000.
 
-```js
-window.LessonPlayer = {
-  start({ course, level, lesson, root, onComplete, onExit }) {
-    // render into `root`, then call onComplete({ mistakes }) or onExit()
-  },
-};
-```
+## How it is built
 
-## Adding a course
+- `server.js`: a dependency-free Node server. Serves `public/` and forwards chat requests to Claude, through fal by default or directly when `ANTHROPIC_API_KEY` is set.
+- `public/app.js`: the whole app in plain JavaScript (landing page, onboarding, home, tutor chat, voice mode, practice, mock exam, memory). State is kept in the browser's local storage.
+- `public/courses/`: the courses and levels module, loaded as an ES module after `app.js`.
+  - `app.js`: course catalog, course page with its level path, lesson player, results and the levels screen. These render inside a shadow root, so `courses.css` and `styles.css` cannot clash. Routes: `#/courses`, `#/course/:id`, `#/lesson/:course/:lesson`, `#/levels`.
+  - `progress.js`: the level system (lesson and level unlocks, XP to level, daily goal). XP and the streak are Lemma's own, read and written through `window.Lemma`, so practice, mock exams and lessons add to one total.
+  - `data/`: the catalog (`index.js`) and one file per course (`courses/*.js`). To add a course, copy a file and register it in `index.js`.
+- `public/img/`: mascot art generated with fal.
 
-Create `src/data/courses/<id>.js` (copy an existing one) and register it in `src/data/index.js`.
-Step types: `info` (title, body), `choice` (prompt, options, answer index, explain), `input` (prompt, answer, explain).
+Lemma is an AI. It is not a human tutor or a mental-health service, and it is written for adults.
+
+## Levels
+
+- A course is split into levels. Lessons unlock in order, and a level unlocks when every lesson in the one before it is done.
+- A lesson gives 10 to 20 XP, plus 5 for no mistakes. Replaying one gives 5 XP.
+- Reaching level `n` takes `25 × n × (n − 1)` XP in total: 50, 150, 300, 500 and so on, from Novice up to Legend.
+- Other code can use `window.Courses.progress`: `addXp(n)`, `levelInfo()`, `courseProgress(course)`, `subscribe(fn)`.
