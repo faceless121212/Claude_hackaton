@@ -360,3 +360,39 @@ p{margin:0} button{font:inherit;color:inherit;cursor:pointer;border:0;background
 .call[data-s=thinking] .call-av .mascot{animation:think 1.3s ease-in-out infinite}
 @keyframes think{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
 @media(prefers-reduced-motion:reduce){.call-av,.call-av .mascot{animation:none!important}.mascot{transform:none}}
+/* v4: study cards, daily problem, ask panel, round review */
+.result .pi,.load .pi,.hint .pi{width:20px;height:20px;border:0;border-radius:0;animation:none;background:none}
+.sp{flex:1}
+.card{padding:20px;border-radius:24px;background:#fff;border:2px solid var(--line);margin-bottom:16px;min-width:0}
+.card .tag{margin-bottom:12px}
+.card-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px} .card-h b{font-family:var(--head);font-size:19px} .card-h .tag{margin:0}
+.card .q{font-size:19px;margin-bottom:14px}
+.choices.two{grid-template-columns:1fr 1fr} .choices.two .choice{font-size:16px;padding:10px 14px} @media(max-width:600px){.choices.two{grid-template-columns:1fr}}
+.ck-fb .hint{margin-top:14px}
+.daily{border-color:var(--ink);box-shadow:0 5px 0 var(--ink);margin-bottom:28px}
+.study{max-width:860px} .study .p-top{margin-bottom:18px}
+.t-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px} @media(max-width:700px){.t-grid{grid-template-columns:1fr}}
+.keys{display:grid;gap:10px} .key{padding:12px 14px;border-radius:14px;background:var(--bg);border:2px solid var(--line);font-size:17px;overflow-x:auto}
+.fig{display:grid;place-items:center;padding:12px} .plot{width:100%;height:auto;display:block} .fig-i{width:150px;height:150px;border-radius:24px}
+.steps{margin:0 0 14px;padding-left:24px;display:grid;gap:8px;font-size:17px} .steps li{animation:pop .2s ease-out}
+.steps li.ans{list-style:none;margin-left:-24px;padding:10px 14px;border-radius:14px;background:var(--green-s);border:2px solid var(--green);font-weight:700}
+.steps:empty{display:none}
+.btn svg{width:18px;height:18px}
+.result+.path{margin-top:8px}
+
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);z-index:30;display:flex;flex-direction:column;background:var(--bg);border-left:2px solid var(--ink);box-shadow:-12px 0 40px rgba(21,20,27,.18);animation:slide .22s ease-out}
+@keyframes slide{from{transform:translateX(40px);opacity:0}}
+.dr-top{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--accent-s);border-bottom:2px solid var(--ink)}
+.dr-top>img{width:44px;height:44px;border-radius:50%;border:2px solid var(--ink);object-fit:cover;background:var(--accent-s)}
+.dr-top .nm{font-family:var(--head);font-size:20px} .dr-top .swap button{width:34px;height:34px}
+.dr-top .x{width:38px;height:38px;border-radius:12px;border:2px solid var(--ink);background:#fff;flex:none}
+.drawer .msgs{padding:16px 14px 6px;gap:10px} .drawer .msg{font-size:16px;padding:11px 15px;max-width:92%}
+.drawer .quick{padding:6px 14px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .drawer .quick .chip{flex:none}
+.drawer .composer{padding:8px 14px 14px}
+
+.l-study{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.l-sc{display:grid;gap:10px;align-content:start;text-align:left;padding:14px;border-radius:24px;background:#fff;border:2px solid var(--ink);box-shadow:0 5px 0 var(--ink);transition:.1s;min-width:0}
+.l-sc:hover{transform:translateY(-3px);box-shadow:0 8px 0 var(--ink)} .l-sc b{font-family:var(--head);font-size:19px}
+.l-sc .key{font-size:14px;padding:8px 10px} .l-sc .plot{border-radius:14px;background:var(--bg)}
+@media(max-width:900px){.l-study{grid-template-columns:repeat(2,1fr)}} @media(max-width:520px){.l-study{grid-template-columns:1fr}}
+.drawer.busy .send,.drawer.busy .swap button:not(.on){opacity:.4;pointer-events:none}

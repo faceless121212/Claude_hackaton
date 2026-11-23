@@ -368,3 +368,11 @@ textarea { font: inherit; color: inherit; }
   .create-mascot-lg { width: 112px; height: 112px; border-radius: 26px; }
   .create-actions .btn { width: 100%; }
 }
+/* the tutor teaches each lesson and can be asked about any step */
+.step-card.teach { grid-template-columns: 96px 1fr; align-items: start; gap: 16px; }
+.step-card.teach > img { width: 96px; height: 96px; border-radius: 50%; border: 3px solid var(--ink); object-fit: cover; }
+.step-card.teach .bubble { display: grid; gap: 12px; padding: 18px 20px; border: 2px solid var(--ink); border-radius: 22px; border-top-left-radius: 6px; background: var(--surface); box-shadow: 0 4px 0 var(--ink); }
+.ask { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 99px; border: 2px solid var(--line); background: var(--surface); font: inherit; font-weight: 700; font-size: .9rem; cursor: pointer; white-space: nowrap; }
+.ask:hover { border-color: var(--ink); }
+.ask img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+@media (max-width: 560px) { .step-card.teach { grid-template-columns: 1fr; } .step-card.teach > img { width: 64px; height: 64px; } }

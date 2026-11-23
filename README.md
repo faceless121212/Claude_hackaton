@@ -5,6 +5,9 @@ An AI study companion for university math and science. It solves problems with y
 ## What it does
 
 - **Talk to any tutor**: the landing page has a live chat with Nova, Max and Ada, no sign-up needed. Inside the app you can switch tutor from the home screen or in the middle of a conversation.
+- **Study cards**: every topic (29 across five subjects) has key formulas, a graph where one helps, a worked example revealed step by step and a quick check, before practice starts.
+- **Today's problem**: one curated question a day on the home screen, worth 5 XP.
+- **Ask panel**: "Ask Nova" opens a side panel on study cards, practice, mock exam reviews and course lessons, so you can ask about what is on screen without leaving it.
 - **Solve together**: type a problem or send a photo; the tutor gives one step at a time and checks your working.
 - **Bad exam?**: talk through what happened, then get a five-day comeback plan aimed at the marks you lost.
 - **Voice mode**: talk with your tutor like a call. Each tutor has its own natural voice, the mascot moves its mouth as it speaks, and you can interrupt by talking over it. Works in any modern browser when `FAL_KEY` is set.
@@ -36,6 +39,7 @@ Open http://localhost:3000.
 ## How it is built
 
 - `server.js`: a dependency-free Node server. Serves `public/` and forwards chat requests to Claude, through fal by default or directly when `ANTHROPIC_API_KEY` is set. It also serves the voice endpoints, `/api/tts` and `/api/stt` (ElevenLabs through fal). These need `FAL_KEY`; without it the app uses the browser's built-in voice and speech recognition (Chrome or Edge). Spoken turns in voice mode use a faster model (`VOICE_MODEL`, Claude Haiku by default) so the tutor answers sooner; everything else uses `MODEL` (Claude Fable 5.2 by default).
+- `public/content.js`: the study-card material (formulas, worked examples, check questions, graph specs), one entry per topic. To add a topic, add an entry here and list it under its subject in `SUBJECTS` in `app.js`.
 - `public/app.js`: the whole app in plain JavaScript (landing page, onboarding, home, tutor chat, voice mode, practice, mock exam, memory). State is kept in the browser's local storage.
 - `public/courses/`: the courses and levels module, loaded as an ES module after `app.js`.
   - `app.js`: course catalog, course page with its level path, lesson player, results and the levels screen. These render inside a shadow root, so `courses.css` and `styles.css` cannot clash. Routes: `#/courses`, `#/course/:id`, `#/lesson/:course/:lesson`, `#/levels`.
