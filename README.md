@@ -38,7 +38,8 @@ Open http://localhost:3000.
   - `app.js`: course catalog, course page with its level path, lesson player, results and the levels screen. These render inside a shadow root, so `courses.css` and `styles.css` cannot clash. Routes: `#/courses`, `#/course/:id`, `#/lesson/:course/:lesson`, `#/levels`.
   - `progress.js`: the level system (lesson and level unlocks, XP to level, daily goal). XP and the streak are Solva's own, read and written through `window.Solva`, so practice, mock exams and lessons add to one total.
   - `data/`: the catalog (`index.js`) and one file per course (`courses/*.js`). To add a course, copy a file and register it in `index.js`.
-- `public/img/`: mascot art generated with fal.
+- `public/img/`: mascot art, icons and the logo (`logo.webp`), generated with fal.
+- `public/favicon.ico`, `icon-192.png`, `apple-touch-icon.png`: the browser-tab and home-screen icons, cut from the same artwork as the logo. `icon-512.png` is the full-size master.
 
 Solva is an AI. It is not a human tutor or a mental-health service, and it is written for adults.
 

@@ -163,7 +163,7 @@ window.speechSynthesis?.getVoices();
 
 /* ---------- shared bits ---------- */
 function nav() {
-  return `<div class="nav"><div class="logo"><i>∫</i>Solva</div><div class="sp"></div>
+  return `<div class="nav"><div class="logo"><img src="/img/logo.webp" alt="">Solva</div><div class="sp"></div>
     <a class="pill courses" href="#/courses">${ico('homework')} <b>Courses</b></a>
     <div class="pill fire">${ico('streak')} <b>${S.streak}</b> day${S.streak === 1 ? '' : 's'}</div>
     <div class="pill xp">${ico('xp')} <b>${S.xp}</b> XP</div>
@@ -553,7 +553,7 @@ function landing() {
     ['#F3F1EA', 'practice', 'Practice', 'Adapts as you answer.'],
   ];
   app.innerHTML = `<div class="land">
-    <header class="l-nav"><div class="logo"><i>∫</i>Solva</div><div class="sp"></div><button class="btn" data-start>${S.profile ? 'Open app' : 'Start free'}</button></header>
+    <header class="l-nav"><div class="logo"><img src="/img/logo.webp" alt="">Solva</div><div class="sp"></div><button class="btn" data-start>${S.profile ? 'Open app' : 'Start free'}</button></header>
     <section class="l-hero"><div>
         <span class="tag">University math & science</span>
         <h1>Bad exam? Come back stronger.</h1>

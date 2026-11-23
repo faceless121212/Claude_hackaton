@@ -33,7 +33,7 @@ p{margin:0} button{font:inherit;color:inherit;cursor:pointer;border:0;background
 /* top nav */
 .nav{display:flex;align-items:center;gap:12px;padding:6px 0 22px}
 .logo{font-family:var(--head);font-weight:800;font-size:26px;letter-spacing:-.03em;display:flex;align-items:center;gap:9px}
-.logo i{width:30px;height:30px;border-radius:9px;background:var(--ink);display:grid;place-items:center;color:var(--yellow);font-style:normal;font-size:19px}
+.logo img{width:30px;height:30px;border-radius:9px;display:block}
 .nav .sp{flex:1}
 .pill{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:99px;background:#fff;border:2px solid var(--line);font-weight:700;font-size:15px}
 .pill.fire b{color:var(--coral)} .pill.xp b{color:var(--purple)}
@@ -239,7 +239,7 @@ p{margin:0} button{font:inherit;color:inherit;cursor:pointer;border:0;background
 
 /* courses link in the nav (module lives in public/courses/) */
 .pill.courses{color:var(--ink);text-decoration:none;box-shadow:0 3px 0 var(--line)} .pill.courses:hover{border-color:var(--ink)}
-@media(max-width:520px){.pill.courses b{display:none}.nav{gap:6px}.nav .pill{padding:7px 10px;font-size:13px}.nav .logo{font-size:0;gap:0}.nav .logo i{font-size:19px}}
+@media(max-width:520px){.pill.courses b{display:none}.nav{gap:6px}.nav .pill{padding:7px 10px;font-size:13px}.nav .logo{font-size:0;gap:0}}
 /* v3: generated 3D icons, line icons, tighter copy */
 .ic{width:22px;height:22px;object-fit:contain;vertical-align:-5px;flex:none}
 .ic.big{width:72px;height:72px;display:block}
