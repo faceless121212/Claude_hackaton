@@ -19,7 +19,53 @@ export const COURSES = [
   scientificThinking,
 ];
 
+// Courses the learner generated with AI (see ../generate.js). They live in localStorage and are
+// appended to COURSES at load, so the rest of the app treats them like any built-in course.
+const CUSTOM_KEY = 'solva.courses.custom';
+
+function readCustom() {
+  try {
+    const list = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]');
+    if (!Array.isArray(list)) return [];
+    // `id`, `icon` and `color` end up in HTML/style unescaped, so re-check them even though we wrote them.
+    return list
+      .filter((c) => c && typeof c.id === 'string' && /^custom-[a-z0-9-]+$/.test(c.id) && typeof c.title === 'string'
+        && Array.isArray(c.levels) && c.levels.length && c.levels.every((l) => Array.isArray(l?.lessons) && l.lessons.length))
+      .map((c) => ({
+        ...c,
+        custom: true,
+        category: 'mine',
+        icon: typeof c.icon === 'string' && c.icon.length <= 16 && !/[\u0000-\u007f]/.test(c.icon) ? c.icon : '✨',
+        color: /^#[0-9a-f]{6}$/i.test(c.color) ? c.color : '#7c5cff',
+      }));
+  } catch { return []; }
+}
+
+function writeCustom() {
+  try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(COURSES.filter((c) => c.custom))); return true; } catch { return false; }
+}
+
+for (const c of readCustom()) if (!COURSES.some((x) => x.id === c.id)) COURSES.push(c);
+
+/** Add (or replace) an AI-generated course and persist it. Returns false if it could not be saved. */
+export function addCourse(course) {
+  const i = COURSES.findIndex((c) => c.id === course.id);
+  if (i >= 0 && !COURSES[i].custom) return false;
+  if (i >= 0) COURSES[i] = course; else COURSES.push(course);
+  return writeCustom();
+}
+
+/** Remove an AI-generated course. Built-in courses cannot be removed. */
+export function removeCourse(id) {
+  const i = COURSES.findIndex((c) => c.id === id && c.custom);
+  if (i < 0) return false;
+  COURSES.splice(i, 1);
+  writeCustom();
+  return true;
+}
+
 export const CATEGORIES = [
+  { id: 'mine', label: 'My courses', icon: '<img class="ico" src="/img/i-bulb.webp" alt="">', blurb: 'Made for you by AI' },
   { id: 'ai', label: 'AI', icon: '<img class="ico" src="/img/c-how-ai-works.webp" alt="">', blurb: 'Understand and use modern AI' },
   { id: 'math', label: 'Math', icon: '<img class="ico" src="/img/c-mathematical-thinking.webp" alt="">', blurb: 'Build real number sense' },
   { id: 'cs', label: 'Computer Science', icon: '<img class="ico" src="/img/c-thinking-in-code.webp" alt="">', blurb: 'Think like a programmer' },
