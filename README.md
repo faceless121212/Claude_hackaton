@@ -22,7 +22,7 @@ Requires Node.js 18 or newer. There is nothing to install.
 cp .env.example .env
 ```
 
-Put your key in `.env` (either `FAL_KEY`, or `ANTHROPIC_API_KEY` to call Claude directly), then:
+Put your key in `.env` or in a `keys.txt` file with the same format (either `FAL_KEY`, or `ANTHROPIC_API_KEY` to call Claude directly), then:
 
 ```bash
 npm start

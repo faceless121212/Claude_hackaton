@@ -2,12 +2,15 @@
 const http = require('http'), fs = require('fs'), path = require('path');
 
 // Minimal .env loader (FAL_KEY=..., MODEL=..., PORT=...)
-try {
-  for (const line of fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('\n')) {
-    const m = line.match(/^\s*([A-Z_]+)\s*=\s*(.*)\s*$/);
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
-  }
-} catch {}
+// Keys can live in .env or in keys.txt (same KEY=value format); both are git-ignored.
+for (const file of ['.env', 'keys.txt']) {
+  try {
+    for (const line of fs.readFileSync(path.join(__dirname, file), 'utf8').split('\n')) {
+      const m = line.match(/^\s*([A-Z_]+)\s*=\s*(.*)\s*$/);
+      if (m && m[2].trim() && !process.env[m[1]]) process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, '');
+    }
+  } catch {}
+}
 
 const PORT = process.env.PORT || 3000;
 const KEY = process.env.FAL_KEY || '';
