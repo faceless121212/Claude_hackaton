@@ -15,6 +15,8 @@ for (const file of ['.env', 'keys.txt']) {
 const PORT = process.env.PORT || 3000;
 const KEY = process.env.FAL_KEY || '';
 const MODEL = process.env.MODEL || 'anthropic/claude-sonnet-5.5';
+// Spoken turns are short and latency matters more than depth, so voice mode uses a faster model.
+const VOICE_MODEL = process.env.VOICE_MODEL || 'anthropic/claude-haiku-5.5';
 const UPSTREAM = 'https://fal.run/openrouter/router/openai/v1/chat/completions';
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
 
@@ -30,6 +32,7 @@ function readBody(req, limit = 12e6) {
 // Provider: Claude directly when ANTHROPIC_API_KEY is set, otherwise Claude through fal (OpenRouter).
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
+const ANTHROPIC_VOICE_MODEL = process.env.ANTHROPIC_VOICE_MODEL || 'claude-haiku-5-5';
 
 function toAnthropic(messages) {
   return messages.map(m => ({
@@ -48,7 +51,7 @@ async function chat(req, res) {
   const messages = (body.messages || []).slice();
   // Models expect the conversation to open with the user.
   if (messages[0]?.role === 'assistant') messages.unshift({ role: 'user', content: '(The student opened a session.)' });
-  const max_tokens = Math.min(body.max_tokens || 1500, 8000), stream = !!body.stream, system = String(body.system || '');
+  const max_tokens = Math.min(body.max_tokens || 1500, 8000), stream = !!body.stream, system = String(body.system || ''), fast = !!body.fast;
   const fail = (code, error, detail) => res.writeHead(code, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error, detail }));
   if (!KEY && !ANTHROPIC_KEY) return void fail(500, 'No API key is set. Add FAL_KEY (or ANTHROPIC_API_KEY) to the .env file and restart.');
 
@@ -58,12 +61,12 @@ async function chat(req, res) {
       ? await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: ANTHROPIC_MODEL, system, messages: toAnthropic(messages), max_tokens, stream }),
+          body: JSON.stringify({ model: fast ? ANTHROPIC_VOICE_MODEL : ANTHROPIC_MODEL, system, messages: toAnthropic(messages), max_tokens, stream }),
         })
       : await fetch(UPSTREAM, {
           method: 'POST',
           headers: { Authorization: 'Key ' + KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: MODEL, messages: [{ role: 'system', content: system }, ...messages], max_tokens, stream, reasoning: { effort: 'low' } }),
+          body: JSON.stringify({ model: fast ? VOICE_MODEL : MODEL, messages: [{ role: 'system', content: system }, ...messages], max_tokens, stream, reasoning: { effort: 'low' } }),
         });
   } catch (e) { return void fail(502, 'Cannot reach the model: ' + e.message); }
   if (!up.ok) return void fail(502, up.status === 401 || up.status === 403 ? 'The API key was rejected. Check the key in .env or keys.txt and restart.'

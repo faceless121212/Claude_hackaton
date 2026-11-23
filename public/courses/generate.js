@@ -73,7 +73,7 @@ function drawForm() {
         </div>
 
         <div class="create-actions">
-          <button class="btn btn-primary" id="create-go" type="submit">${error ? 'Try again' : '✨ Generate course'}</button>
+          <button class="btn btn-primary" id="create-go" type="submit">${error ? 'Try again' : 'Generate course'}</button>
           <small>${LEVELS} levels · ${TOTAL_LESSONS} lessons · takes about a minute</small>
         </div>
         <small class="create-note">AI-written lessons can contain mistakes. Check anything important against your course material.</small>

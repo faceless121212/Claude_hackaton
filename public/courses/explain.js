@@ -71,10 +71,10 @@ export function renderExplain(root, course, levelIndex) {
     shell('', esc(ask), `
       ${note ? `<p class="ex-note">${esc(note)}</p>` : ''}
       <div class="ex-actions">
-        <button class="btn btn-primary" id="talk">🎙 Start explaining</button>
+        <button class="btn btn-primary" id="talk">${solva.IC.mic} Start explaining</button>
         <button class="btn btn-ghost" id="type">Type instead</button>
       </div>
-      <small>About 30 seconds is plenty. ${esc(tutor.name)} is an AI and listens only while the mic is on.</small>`);
+      <p class="ex-hint">About 30 seconds is plenty.</p>`);
     $('#talk').onclick = () => { Voice.unlock(); record(); };
     $('#type').onclick = typed;
     Voice.ready.then(() => { if (here() && !Voice.canListen && $('#talk')) { $('#talk').remove(); $('#type').className = 'btn btn-primary'; } });
@@ -153,9 +153,9 @@ export function renderExplain(root, course, levelIndex) {
         <div><h2>${esc(res.headline)}</h2><small>${passed ? 'Explained' : `Reach ${PASS} to mark this level as explained`} · +${award.xp} XP${award.leveledUp ? ` · Level up! Level ${lvl.level}` : ''}</small></div>
       </div>
       <div class="ex-cards">
-        ${points('✅ You nailed', res.nailed, 'good')}
-        ${points('🧩 Still missing', res.missing, 'miss')}
-        ${res.fix ? `<div class="ex-card fix"><b>🔧 One thing to add</b><p>${esc(res.fix)}</p></div>` : ''}
+        ${points('You nailed', res.nailed, 'good')}
+        ${points('Still missing', res.missing, 'miss')}
+        ${res.fix ? `<div class="ex-card fix"><b>One thing to add</b><p>${esc(res.fix)}</p></div>` : ''}
       </div>
       <details class="ex-said"><summary>What you said</summary><p>${esc(text)}</p></details>
       <div class="ex-actions">

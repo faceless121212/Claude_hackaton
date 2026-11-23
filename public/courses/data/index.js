@@ -65,7 +65,7 @@ export function removeCourse(id) {
 }
 
 export const CATEGORIES = [
-  { id: 'mine', label: 'My courses', icon: '✨', blurb: 'Made for you by AI' },
+  { id: 'mine', label: 'My courses', icon: '<img class="ico" src="/img/i-bulb.webp" alt="">', blurb: 'Made for you by AI' },
   { id: 'ai', label: 'AI', icon: '<img class="ico" src="/img/c-how-ai-works.webp" alt="">', blurb: 'Understand and use modern AI' },
   { id: 'math', label: 'Math', icon: '<img class="ico" src="/img/c-mathematical-thinking.webp" alt="">', blurb: 'Build real number sense' },
   { id: 'cs', label: 'Computer Science', icon: '<img class="ico" src="/img/c-thinking-in-code.webp" alt="">', blurb: 'Think like a programmer' },

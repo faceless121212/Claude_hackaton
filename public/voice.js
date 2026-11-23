@@ -168,7 +168,7 @@
     const rec = new MediaRecorder(stream), chunks = [];
     rec.ondataavailable = e => e.data.size && chunks.push(e.data);
     return new Promise((resolve, reject) => {
-      const silenceMs = opts.silenceMs || 1300, waitMs = opts.waitMs || 9000, maxMs = opts.maxMs || 60000;
+      const silenceMs = opts.silenceMs || 1100, waitMs = opts.waitMs || 9000, maxMs = opts.maxMs || 60000;
       let heard = false, loud = 0, quiet = 0, cancelled = false, raf = 0, last = performance.now();
       const t0 = last;
       const halt = () => { if (rec.state !== 'inactive') rec.stop(); };
@@ -211,7 +211,9 @@
     const loop = () => {
       const now = performance.now(), dt = now - last, lv = micLevel(); last = now;
       // The first half second measures how much of the tutor's own voice leaks into the mic.
+      // If a lot leaks (loud speakers, no echo cancellation), talking over it cannot be told apart from the tutor: tap instead.
       if (now - t0 < 500) { base = Math.max(base, lv); n++; }
+      else if (base > 0.22) return;
       else if (lv > Math.max(0.3, base * 2.5)) { over += dt; if (over > 350) return void onVoice(); }
       else over = Math.max(0, over - dt);
       raf = requestAnimationFrame(loop);

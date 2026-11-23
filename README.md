@@ -35,7 +35,7 @@ Open http://localhost:3000.
 
 ## How it is built
 
-- `server.js`: a dependency-free Node server. Serves `public/` and forwards chat requests to Claude, through fal by default or directly when `ANTHROPIC_API_KEY` is set. It also serves the voice endpoints, `/api/tts` and `/api/stt` (ElevenLabs through fal). These need `FAL_KEY`; without it the app uses the browser's built-in voice and speech recognition (Chrome or Edge).
+- `server.js`: a dependency-free Node server. Serves `public/` and forwards chat requests to Claude, through fal by default or directly when `ANTHROPIC_API_KEY` is set. It also serves the voice endpoints, `/api/tts` and `/api/stt` (ElevenLabs through fal). These need `FAL_KEY`; without it the app uses the browser's built-in voice and speech recognition (Chrome or Edge). Spoken turns in voice mode use a faster model (`VOICE_MODEL`, Claude Haiku by default) so the tutor answers sooner; everything else uses `MODEL`.
 - `public/app.js`: the whole app in plain JavaScript (landing page, onboarding, home, tutor chat, voice mode, practice, mock exam, memory). State is kept in the browser's local storage.
 - `public/courses/`: the courses and levels module, loaded as an ES module after `app.js`.
   - `app.js`: course catalog, course page with its level path, lesson player, results and the levels screen. These render inside a shadow root, so `courses.css` and `styles.css` cannot clash. Routes: `#/courses`, `#/course/:id`, `#/lesson/:course/:lesson`, `#/levels`.

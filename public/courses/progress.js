@@ -189,6 +189,14 @@ export function completeLesson(course, lesson, { mistakes = 0 } = {}) {
   };
 }
 
+/** Drop everything stored for a course (used when a learner deletes a course they generated). */
+export function forgetCourse(courseId) {
+  delete state.completed[courseId];
+  delete state.explained[courseId];
+  if (state.activeCourse === courseId) state.activeCourse = null;
+  save();
+}
+
 // ---- Explain it back ------------------------------------------------------
 
 /** Best "explain it back" result for a level: { score, at } or undefined. */

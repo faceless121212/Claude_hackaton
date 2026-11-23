@@ -86,8 +86,8 @@ async function post(body) {
 async function ask(system, messages, max_tokens = 1500) {
   return (await (await post({ system, messages, max_tokens })).json()).text;
 }
-async function stream(system, messages, onText, max_tokens = 1500) {
-  const r = await post({ system, messages, stream: true, max_tokens });
+async function stream(system, messages, onText, max_tokens = 1500, fast = false) {
+  const r = await post({ system, messages, stream: true, max_tokens, fast });
   const rd = r.body.getReader(), dec = new TextDecoder();
   let buf = '', full = '';
   for (;;) {
@@ -318,7 +318,7 @@ function session(mode, ctx, first) {
     try {
       // In voice mode the tutor starts speaking the first sentence while the rest is still being written.
       const sp = call ? Voice.speaker({ tutor: p.tutor, onLevel: mouth, onStart: speaking }) : null;
-      const full = await stream(persona(mode, call), msgs, txt => { el.innerHTML = rich(txt); scroll(); if (call) $('#cap').innerHTML = rich(txt); sp?.push(txt); });
+      const full = await stream(persona(mode, call), msgs, txt => { el.innerHTML = rich(txt); scroll(); if (call) $('#cap').innerHTML = rich(txt); sp?.push(txt); }, call ? 400 : 1500, call);
       msgs.push({ role: 'assistant', content: full });
       sp?.end(full).then(afterSpeech);
     } catch (e) { el.classList.add('err'); el.textContent = e.message + ' Try again.'; msgs.pop(); }
@@ -692,7 +692,7 @@ function landing() {
 }
 
 /* ---------- bridge for the courses + levels module (public/courses/) ---------- */
-window.Solva = { S, save, touchStreak, nav, home, landing, T, pic, confetti, ask, stream };
+window.Solva = { S, save, touchStreak, nav, home, landing, T, pic, confetti, ask, stream, IC };
 
 /* ---------- boot ---------- */
 S.profile ? home() : landing();

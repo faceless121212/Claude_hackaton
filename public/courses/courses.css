@@ -91,6 +91,7 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 .daily-row { display: flex; justify-content: space-between; font-size: .9rem; }
 
 .chooser { margin-bottom: 20px; }
+.chooser-head { display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .chooser-row { display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 14px; }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .chip { padding: 9px 16px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface); font-weight: 600; cursor: pointer; box-shadow: 0 3px 0 var(--line); }
@@ -245,6 +246,13 @@ a.node:active { transform: translateY(7px); box-shadow: none; }
 .how b { color: var(--ink); }
 
 /* ---- explain it back ---- */
+.btn svg, .level-explain svg { width: 18px; height: 18px; flex: none; vertical-align: -3px; margin-right: 6px; }
+.explain-ic { width: 46px; height: 46px; flex: none; border-radius: 14px; display: grid; place-items: center; background: var(--ink); color: #fff; }
+.explain-ic svg { width: 24px; height: 24px; }
+.explain-cta div span { color: var(--ink); font-size: .92rem; }
+.ex-hint { font-weight: 600; }
+.create-cta-icon img { width: 34px; height: 34px; object-fit: contain; display: block; }
+.create-cta-text > span { font-size: .92rem; }
 .level-explain { flex: none; font-weight: 800; font-size: .85rem; padding: 7px 12px; border-radius: 12px; background: #fff; color: var(--ink); box-shadow: 0 3px 0 rgba(0,0,0,.25); white-space: nowrap; }
 .level-explain:active { transform: translateY(3px); box-shadow: none; }
 .explain-cta { display: flex; align-items: center; gap: 14px; text-align: left; padding: 14px 16px; border-radius: 16px; border: 2px solid var(--ink); background: color-mix(in srgb, var(--brand) 12%, var(--surface)); box-shadow: 0 4px 0 var(--ink); transition: transform .08s, box-shadow .08s; }

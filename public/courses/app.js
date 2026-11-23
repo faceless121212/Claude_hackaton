@@ -183,10 +183,13 @@ function renderHome() {
     <div class="page">
       ${continueCard()}
       <section class="chooser">
-        <h1>What do you want to learn?</h1>
+        <div class="chooser-head">
+          <h1>What do you want to learn?</h1>
+          <input class="search" id="search" type="search" placeholder="Search courses" aria-label="Search courses" value="${esc(ui.query)}">
+        </div>
         <a class="create-cta" href="#/create">
-          <span class="create-cta-icon" aria-hidden="true">✨</span>
-          <span class="create-cta-text"><b>Create your own course</b><small>Type any topic or paste your notes — AI builds the lessons for you</small></span>
+          <span class="create-cta-icon" aria-hidden="true"><img src="/img/i-bulb.webp" alt=""></span>
+          <span class="create-cta-text"><b>Create your own course</b><span>Any topic, or paste your notes</span></span>
           <span class="btn btn-primary btn-small">Create with AI</span>
         </a>
         <div class="chooser-row">
@@ -194,7 +197,6 @@ function renderHome() {
             <button class="chip ${ui.category === 'all' ? 'active' : ''}" data-cat="all">All</button>
             ${CATEGORIES.map((c) => `<button class="chip ${ui.category === c.id ? 'active' : ''}" data-cat="${c.id}">${c.icon} ${esc(c.label)}</button>`).join('')}
           </div>
-          <input class="search" id="search" type="search" placeholder="Search courses" aria-label="Search courses" value="${esc(ui.query)}">
         </div>
       </section>
       <div id="catalog">${catalogHtml()}</div>
@@ -233,7 +235,7 @@ function renderCourse(courseId) {
           <p>${esc(lv.level.summary)}</p>
         </div>
         ${lv.status === 'done'
-          ? `<a class="level-explain" href="#/explain/${course.id}/${lv.index}" title="Explain this level out loud and get feedback">${progress.explained(course.id, lv.level.id)?.passed ? '🎙 Explained ✓' : '🎙 Explain it back'}</a>`
+          ? `<a class="level-explain" href="#/explain/${course.id}/${lv.index}" title="Explain this level out loud and get feedback">${progress.explained(course.id, lv.level.id)?.passed ? `${solva.IC.check} Explained` : `${solva.IC.mic} Explain it back`}</a>`
           : `<span class="level-count">${lv.done}/${lv.total}</span>`}
       </header>
       <ol class="nodes">
@@ -282,6 +284,7 @@ function renderCourse(courseId) {
   app.querySelector('#delete-course')?.addEventListener('click', () => {
     if (!confirm(`Delete “${course.title}”? This cannot be undone.`)) return;
     removeCourse(course.id);
+    progress.forgetCourse(course.id);
     location.hash = '#/courses';
   });
   app.querySelector('.node-current')?.scrollIntoView({ block: 'center' });
@@ -471,8 +474,8 @@ function showResults(course, lesson, r) {
         </div>
         ${r.levelCompleted ? `
         <a class="explain-cta" href="#/explain/${course.id}/${r.levelCompleted.index}">
-          <span>🎙</span>
-          <div><b>Explain it back to ${esc(solva.T().name)}</b><small>Say what you learned out loud and get feedback · +${progress.EXPLAIN_XP} XP</small></div>
+          <span class="explain-ic">${solva.IC.mic}</span>
+          <div><b>Explain it back to ${esc(solva.T().name)}</b><span>Say it out loud, get feedback · +${progress.EXPLAIN_XP} XP</span></div>
         </a>` : ''}
         <div class="result-actions">
           ${next ? `<a class="btn btn-primary" id="next" href="#/lesson/${course.id}/${next.id}">Next lesson</a>` : `<a class="btn btn-primary" id="next" href="#/courses">Find a new course</a>`}
