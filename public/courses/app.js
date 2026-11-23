@@ -1,5 +1,7 @@
-import { COURSES, CATEGORIES, PATHS, FEATURED_COURSE_ID, getCourse, findLesson, courseStats } from './data/index.js';
+import { COURSES, CATEGORIES, PATHS, FEATURED_COURSE_ID, getCourse, findLesson, courseStats, removeCourse } from './data/index.js';
 import * as progress from './progress.js';
+import { renderCreate } from './generate.js';
+import { renderExplain } from './explain.js';
 
 // Courses + levels for Solva. Solva's own screens render straight into #app; ours render into a
 // shadow root inside it, so the two stylesheets can never collide. `window.Solva` is the bridge
@@ -141,6 +143,7 @@ function catalogHtml() {
   const groups = CATEGORIES
     .map((cat) => ({ cat, courses: COURSES.filter((c) => c.category === cat.id && matches(c)) }))
     .filter((g) => g.courses.length);
+  if (!groups.length && ui.category === 'mine' && !q) return '<p class="empty">You have not created a course yet. <a href="#/create">Create one with AI →</a></p>';
   if (!groups.length) return `<p class="empty">No courses match “${esc(ui.query)}”. Try a different search.</p>`;
   return groups.map(({ cat, courses }) => `
     <section class="cat-section">
@@ -180,13 +183,20 @@ function renderHome() {
     <div class="page">
       ${continueCard()}
       <section class="chooser">
-        <h1>What do you want to learn?</h1>
+        <div class="chooser-head">
+          <h1>What do you want to learn?</h1>
+          <input class="search" id="search" type="search" placeholder="Search courses" aria-label="Search courses" value="${esc(ui.query)}">
+        </div>
+        <a class="create-cta" href="#/create">
+          <span class="create-cta-icon" aria-hidden="true"><img src="/img/i-bulb.webp" alt=""></span>
+          <span class="create-cta-text"><b>Create your own course</b><span>Any topic, or paste your notes</span></span>
+          <span class="btn btn-primary btn-small">Create with AI</span>
+        </a>
         <div class="chooser-row">
           <div class="chips" role="tablist" aria-label="Course categories">
             <button class="chip ${ui.category === 'all' ? 'active' : ''}" data-cat="all">All</button>
             ${CATEGORIES.map((c) => `<button class="chip ${ui.category === c.id ? 'active' : ''}" data-cat="${c.id}">${c.icon} ${esc(c.label)}</button>`).join('')}
           </div>
-          <input class="search" id="search" type="search" placeholder="Search courses" aria-label="Search courses" value="${esc(ui.query)}">
         </div>
       </section>
       <div id="catalog">${catalogHtml()}</div>
@@ -224,7 +234,9 @@ function renderCourse(courseId) {
           <h2>${esc(lv.level.title)}</h2>
           <p>${esc(lv.level.summary)}</p>
         </div>
-        <span class="level-count">${lv.done}/${lv.total}</span>
+        ${lv.status === 'done'
+          ? `<a class="level-explain" href="#/explain/${course.id}/${lv.index}" title="Explain this level out loud and get feedback">${progress.explained(course.id, lv.level.id)?.passed ? `${solva.IC.check} Explained` : `${solva.IC.mic} Explain it back`}</a>`
+          : `<span class="level-count">${lv.done}/${lv.total}</span>`}
       </header>
       <ol class="nodes">
         ${lv.lessons.map(({ lesson, status }) => {
@@ -264,10 +276,17 @@ function renderCourse(courseId) {
             <small>${p.complete ? 'Course complete' : `Level ${p.currentLevel} of ${p.levelCount} · ${p.done}/${p.total} lessons`}</small>
           </div>
           ${cta}
+          ${course.custom ? '<button class="course-delete" id="delete-course" type="button">Delete course</button>' : ''}
         </div>
       </aside>
       <div class="levels">${levelsHtml}</div>
     </div>`;
+  app.querySelector('#delete-course')?.addEventListener('click', () => {
+    if (!confirm(`Delete “${course.title}”? This cannot be undone.`)) return;
+    removeCourse(course.id);
+    progress.forgetCourse(course.id);
+    location.hash = '#/courses';
+  });
   app.querySelector('.node-current')?.scrollIntoView({ block: 'center' });
 }
 
@@ -342,7 +361,7 @@ function drawStep() {
 
   const action = app.querySelector('#action');
   action.addEventListener('click', onAction);
-  app.querySelector('#ask').addEventListener('click', () => solva.ask(
+  app.querySelector('#ask').addEventListener('click', () => solva.askTutor(
     `I am taking the course "${course.title}", lesson "${lesson.title}". The step on my screen is:\n${step.type === 'info' ? `${step.title}\n${step.body}` : `${step.prompt}${step.options ? '\nOptions: ' + step.options.join(' | ') : ''}`}\nHelp me understand it${step.type === 'info' ? '' : ' without just giving me the answer'}.`, 'solve'));
   app.querySelectorAll('.option').forEach((btn) => btn.addEventListener('click', () => selectOption(Number(btn.dataset.opt))));
   const input = app.querySelector('#answer');
@@ -456,6 +475,11 @@ function showResults(course, lesson, r) {
           ${bar(lvl.pct)}
           <small>${lvl.toNext} XP to Level ${lvl.level + 1}</small>
         </div>
+        ${r.levelCompleted ? `
+        <a class="explain-cta" href="#/explain/${course.id}/${r.levelCompleted.index}">
+          <span class="explain-ic">${solva.IC.mic}</span>
+          <div><b>Explain it back to ${esc(solva.T().name)}</b><span>Say it out loud, get feedback · +${progress.EXPLAIN_XP} XP</span></div>
+        </a>` : ''}
         <div class="result-actions">
           ${next ? `<a class="btn btn-primary" id="next" href="#/lesson/${course.id}/${next.id}">Next lesson</a>` : `<a class="btn btn-primary" id="next" href="#/courses">Find a new course</a>`}
           <a class="btn btn-ghost" href="#/course/${course.id}">Back to course</a>
@@ -535,10 +559,11 @@ function homeCard(slot) {
 }
 
 // ---- router -----------------------------------------------------------------
-// Our screens live under #/courses, #/course/:id, #/lesson/:course/:lesson and #/levels.
+// Our screens live under #/courses, #/course/:id, #/lesson/:course/:lesson, #/levels, #/create
+// and #/explain/:course/:levelIndex.
 // Any other hash hands the page back to Solva.
 
-const VIEWS = ['courses', 'course', 'lesson', 'levels'];
+const VIEWS = ['courses', 'course', 'lesson', 'levels', 'create', 'explain'];
 let active = false;
 
 function route() {
@@ -549,10 +574,12 @@ function route() {
     return;
   }
   active = true;
-  frame(view === 'lesson');
+  frame(view === 'lesson' || view === 'explain');
   if (view === 'course') renderCourse(a);
   else if (view === 'lesson') renderLesson(a, b);
   else if (view === 'levels') renderProfile();
+  else if (view === 'create') renderCreate(app);
+  else if (view === 'explain') renderExplain(app, getCourse(a), Number(b));
   else renderHome();
   renderTopbar();
   if (view !== 'course') window.scrollTo(0, 0);
