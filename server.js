@@ -47,6 +47,7 @@ async function chat(req, res) {
   if (messages[0]?.role === 'assistant') messages.unshift({ role: 'user', content: '(The student opened a session.)' });
   const max_tokens = Math.min(body.max_tokens || 1500, 4000), stream = !!body.stream, system = String(body.system || '');
   const fail = (code, error, detail) => res.writeHead(code, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error, detail }));
+  if (!KEY && !ANTHROPIC_KEY) return void fail(500, 'No API key is set. Add FAL_KEY (or ANTHROPIC_API_KEY) to the .env file and restart.');
 
   let up;
   try {
@@ -101,4 +102,7 @@ http.createServer((req, res) => {
     if (err) return void res.writeHead(404).end('Not found');
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' }).end(data);
   });
-}).listen(PORT, () => console.log(`Lemma running at http://localhost:${PORT}  (${ANTHROPIC_KEY ? 'Claude direct: ' + ANTHROPIC_MODEL : 'Claude via fal: ' + MODEL})`));
+}).on('error', e => {
+  console.error(e.code === 'EADDRINUSE' ? `Port ${PORT} is already in use. Close the other program or run with PORT=3001.` : e.message);
+  process.exit(1);
+}).listen(PORT, () => { if (!KEY && !ANTHROPIC_KEY) console.warn('WARNING: no API key found. Copy .env.example to .env and add FAL_KEY.'); console.log(`Lemma running at http://localhost:${PORT}  (${ANTHROPIC_KEY ? 'Claude direct: ' + ANTHROPIC_MODEL : 'Claude via fal: ' + MODEL})`); });
