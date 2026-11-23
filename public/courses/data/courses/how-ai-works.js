@@ -5,7 +5,7 @@ export default {
   tagline: 'From next-word guesses to AI agents, step by step',
   description:
     'Build real intuition for how modern AI works: prediction, neural networks, training, and large language models. No math background needed, just curiosity.',
-  icon: '🧠',
+  icon: '<img class="ico" src="/img/c-how-ai-works.webp" alt="">',
   color: '#7c5cff',
   difficulty: 'Beginner',
   isNew: true,

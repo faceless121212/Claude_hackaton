@@ -35,6 +35,7 @@ function frame(fullscreen) {
 
 // ---- helpers ----------------------------------------------------------------
 
+const ico = (name) => `<img class="ico" src="/img/${name}.webp" alt="">`;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /** Tiny formatter for lesson text: paragraphs, **bold**, `code`. */
@@ -96,7 +97,7 @@ function continueCard(embed = false) {
       ${bar(lvl.pct)}
       <small>${lvl.into} / ${lvl.span} XP · ${lvl.toNext} XP to Level ${lvl.level + 1}</small>
       <div class="daily">
-        <div class="daily-row"><span>🎯 Daily goal</span><b>${day.xp} / ${day.goal} XP</b></div>
+        <div class="daily-row"><span>${ico('i-target')} Daily goal</span><b>${day.xp} / ${day.goal} XP</b></div>
         ${bar(day.pct, 'var(--green)')}
       </div>
     </div>`;
@@ -124,7 +125,7 @@ function continueCard(embed = false) {
         <div class="continue-body">
           <small>${course ? 'Course complete — try this next' : 'Recommended for you'}</small>
           <h2>${esc(featured.title)}</h2>
-          <p>${esc(featured.description)}</p>
+          <p>${esc(featured.tagline)}</p>
           <small class="meta">${s.levels} levels · ${s.lessons} lessons · ${s.xp} XP</small>
           <div class="cta-row"><a class="btn btn-primary" href="#/course/${featured.id}">Start learning</a>${allLink}</div>
         </div>
@@ -217,7 +218,7 @@ function renderCourse(courseId) {
   const levelsHtml = p.levels.map((lv) => `
     <section class="level level-${lv.status}">
       <header class="level-head">
-        <span class="level-num">${lv.status === 'done' ? '✓' : lv.status === 'locked' ? '🔒' : lv.index + 1}</span>
+        <span class="level-num">${lv.status === 'done' ? '✓' : lv.status === 'locked' ? ico('i-lock') : lv.index + 1}</span>
         <div>
           <small>Level ${lv.index + 1}${lv.status === 'done' ? ' · Complete' : lv.status === 'locked' ? ' · Locked' : ''}</small>
           <h2>${esc(lv.level.title)}</h2>
@@ -229,7 +230,7 @@ function renderCourse(courseId) {
         ${lv.lessons.map(({ lesson, status }) => {
           const off = OFFSETS[n++ % OFFSETS.length];
           const label = `${esc(lesson.title)} — ${status === 'done' ? 'completed' : status === 'current' ? 'up next' : 'locked'}`;
-          const inner = status === 'done' ? '✓' : status === 'current' ? '▶' : '🔒';
+          const inner = status === 'done' ? '✓' : status === 'current' ? '▶' : ico('i-lock');
           const node = status === 'locked'
             ? `<span class="node node-locked" aria-label="${label}">${inner}</span>`
             : `<a class="node node-${status}" href="#/lesson/${course.id}/${lesson.id}" aria-label="${label}">${inner}</a>`;
@@ -260,7 +261,7 @@ function renderCourse(courseId) {
           </div>
           <div class="course-progress">
             ${bar(p.pct, course.color)}
-            <small>${p.complete ? 'Course complete 🎉' : `Level ${p.currentLevel} of ${p.levelCount} · ${p.done}/${p.total} lessons`}</small>
+            <small>${p.complete ? 'Course complete' : `Level ${p.currentLevel} of ${p.levelCount} · ${p.done}/${p.total} lessons`}</small>
           </div>
           ${cta}
         </div>
@@ -433,7 +434,7 @@ function showResults(course, lesson, r) {
   const st = progress.streak();
   const next = r.nextLesson;
   const headline = r.courseCompleted ? 'Course complete!' : r.levelCompleted ? `Level ${r.levelCompleted.index + 1} complete!` : r.perfect ? 'Perfect lesson!' : 'Lesson complete!';
-  const emoji = r.courseCompleted ? '🏆' : r.levelCompleted ? '🎉' : r.perfect ? '🌟' : '✅';
+  const emoji = ico('i-trophy');
 
   app.innerHTML = `
     <div class="lesson results" style="--c:${course.color}">
@@ -444,7 +445,7 @@ function showResults(course, lesson, r) {
         <p>${esc(lesson.title)}${r.firstTime ? '' : ' · practice round'}</p>
         <div class="result-stats">
           <div><b>+${r.xpGained}</b><small>XP earned${r.bonus ? ` (incl. +${r.bonus} perfect)` : ''}</small></div>
-          <div><b>🔥 ${st.count}</b><small>day streak</small></div>
+          <div><b>${ico('i-flame')} ${st.count}</b><small>day streak</small></div>
           <div><b>${lvl.level}</b><small>${esc(lvl.title)}</small></div>
         </div>
         ${r.leveledUp ? `<div class="levelup">⬆ Level up! You reached <b>Level ${lvl.level} — ${esc(lvl.title)}</b></div>` : ''}
@@ -486,9 +487,9 @@ function renderProfile() {
           <small>${lvl.into} / ${lvl.span} XP · ${lvl.toNext} XP to Level ${lvl.level + 1}</small>
         </div>
         <div class="profile-stats">
-          <div><b>⚡ ${lvl.xp}</b><small>total XP</small></div>
-          <div><b>🔥 ${st.count}</b><small>day streak</small></div>
-          <div><b>🎯 ${day.xp}/${day.goal}</b><small>today</small></div>
+          <div><b>${ico('i-bolt')} ${lvl.xp}</b><small>total XP</small></div>
+          <div><b>${ico('i-flame')} ${st.count}</b><small>day streak</small></div>
+          <div><b>${ico('i-target')} ${day.xp}/${day.goal}</b><small>today</small></div>
         </div>
       </section>
       <div class="profile-cols">

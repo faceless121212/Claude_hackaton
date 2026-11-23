@@ -4,7 +4,7 @@ export default {
   category: 'science',
   tagline: 'Predict, test, and explain how the world works',
   description: 'Sharpen your intuition for forces and energy, then learn how scientists design fair tests and weigh evidence.',
-  icon: '🔬',
+  icon: '<img class="ico" src="/img/c-scientific-thinking.webp" alt="">',
   color: '#06b6d4',
   difficulty: 'Beginner',
   isNew: false,

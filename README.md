@@ -4,6 +4,7 @@ An AI study companion for university math and science. It solves problems with y
 
 ## What it does
 
+- **Talk to any tutor**: the landing page has a live chat with Nova, Max and Ada, no sign-up needed. Inside the app you can switch tutor from the home screen or in the middle of a conversation.
 - **Solve together**: type a problem or send a photo; the tutor gives one step at a time and checks your working.
 - **Bad exam?**: talk through what happened, then get a five-day comeback plan aimed at the marks you lost.
 - **Voice mode**: speak to the tutor and hear replies aloud (Chrome or Edge).
@@ -38,7 +39,7 @@ Open http://localhost:3000.
   - `app.js`: course catalog, course page with its level path, lesson player, results and the levels screen. These render inside a shadow root, so `courses.css` and `styles.css` cannot clash. Routes: `#/courses`, `#/course/:id`, `#/lesson/:course/:lesson`, `#/levels`.
   - `progress.js`: the level system (lesson and level unlocks, XP to level, daily goal). XP and the streak are Lemma's own, read and written through `window.Lemma`, so practice, mock exams and lessons add to one total.
   - `data/`: the catalog (`index.js`) and one file per course (`courses/*.js`). To add a course, copy a file and register it in `index.js`.
-- `public/img/`: mascot art generated with fal.
+- `public/img/`: all art is generated with fal. `nova|max|ada*.webp` are the mascots, `s-*.webp` are mascot scenes for features, `i-*.webp` are subject and status icons, `c-*.webp` are course icons. Small controls (send, camera, mic, close) are inline line icons in `app.js`.
 
 Lemma is an AI. It is not a human tutor or a mental-health service, and it is written for adults.
 
