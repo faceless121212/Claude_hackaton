@@ -1,17 +1,22 @@
-// Lemma — zero-dependency server. Serves ./public (the tutor at /, courses at /courses/) and proxies chat to Claude via fal's OpenRouter endpoint.
+// Solva — zero-dependency server. Serves ./public and proxies chat to Claude via fal's OpenRouter endpoint.
 const http = require('http'), fs = require('fs'), path = require('path');
 
 // Minimal .env loader (FAL_KEY=..., MODEL=..., PORT=...)
-try {
-  for (const line of fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('\n')) {
-    const m = line.match(/^\s*([A-Z_]+)\s*=\s*(.*)\s*$/);
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
-  }
-} catch {}
+// Keys can live in .env or in keys.txt (same KEY=value format); both are git-ignored.
+for (const file of ['.env', 'keys.txt']) {
+  try {
+    for (const line of fs.readFileSync(path.join(__dirname, file), 'utf8').split('\n')) {
+      const m = line.match(/^\s*([A-Z_]+)\s*=\s*(.*)\s*$/);
+      if (m && m[2].trim() && !process.env[m[1]]) process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, '');
+    }
+  } catch {}
+}
 
 const PORT = process.env.PORT || 3000;
 const KEY = process.env.FAL_KEY || '';
-const MODEL = process.env.MODEL || 'anthropic/claude-fable-5.2';
+const MODEL = process.env.MODEL || 'anthropic/claude-sonnet-5.5';
+// Spoken turns are short and latency matters more than depth, so voice mode uses a faster model.
+const VOICE_MODEL = process.env.VOICE_MODEL || 'anthropic/claude-haiku-5.5';
 const UPSTREAM = 'https://fal.run/openrouter/router/openai/v1/chat/completions';
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
 
@@ -26,10 +31,8 @@ function readBody(req, limit = 12e6) {
 
 // Provider: Claude directly when ANTHROPIC_API_KEY is set, otherwise Claude through fal (OpenRouter).
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-fable-5-2';
-// These models can decline a request; with fallbacks on, the API re-runs a declined request on another model.
-const FALLBACKS = /^claude-(fable-5-[12]|opus-5|sonnet-5-5)/.test(ANTHROPIC_MODEL);
-const DECLINED = "I can't help with that one. Try asking it another way.";
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
+const ANTHROPIC_VOICE_MODEL = process.env.ANTHROPIC_VOICE_MODEL || 'claude-haiku-5-5';
 
 function toAnthropic(messages) {
   return messages.map(m => ({
@@ -48,34 +51,30 @@ async function chat(req, res) {
   const messages = (body.messages || []).slice();
   // Models expect the conversation to open with the user.
   if (messages[0]?.role === 'assistant') messages.unshift({ role: 'user', content: '(The student opened a session.)' });
-  const max_tokens = Math.min(body.max_tokens || 1500, 4000), stream = !!body.stream, system = String(body.system || '');
+  const max_tokens = Math.min(body.max_tokens || 1500, 8000), stream = !!body.stream, system = String(body.system || ''), fast = !!body.fast;
   const fail = (code, error, detail) => res.writeHead(code, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error, detail }));
-  if (!KEY && !ANTHROPIC_KEY) return void fail(500, 'No API key is set. Add FAL_KEY or ANTHROPIC_API_KEY to .env and restart.');
+  if (!KEY && !ANTHROPIC_KEY) return void fail(500, 'No API key is set. Add FAL_KEY (or ANTHROPIC_API_KEY) to the .env file and restart.');
 
   let up;
   try {
     up = ANTHROPIC_KEY
       ? await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
-          headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json',
-            ...(FALLBACKS && { 'anthropic-beta': 'server-side-fallback-2026-07-01' }) },
-          // Low effort: these models think before every reply, and a short tutor message has to stay fast and inside max_tokens.
-          body: JSON.stringify({ model: ANTHROPIC_MODEL, system, messages: toAnthropic(messages), max_tokens, stream,
-            output_config: { effort: 'low' }, ...(FALLBACKS && { fallbacks: 'default' }) }),
+          headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: fast ? ANTHROPIC_VOICE_MODEL : ANTHROPIC_MODEL, system, messages: toAnthropic(messages), max_tokens, stream }),
         })
       : await fetch(UPSTREAM, {
           method: 'POST',
           headers: { Authorization: 'Key ' + KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: MODEL, messages: [{ role: 'system', content: system }, ...messages], max_tokens, stream, reasoning: { effort: 'low' } }),
+          body: JSON.stringify({ model: fast ? VOICE_MODEL : MODEL, messages: [{ role: 'system', content: system }, ...messages], max_tokens, stream, reasoning: { effort: 'low' } }),
         });
   } catch (e) { return void fail(502, 'Cannot reach the model: ' + e.message); }
-  if (!up.ok) return void fail(502, up.status === 401 || up.status === 403 ? 'The API key was rejected. Check the key in .env and restart.'
+  if (!up.ok) return void fail(502, up.status === 401 || up.status === 403 ? 'The API key was rejected. Check the key in .env or keys.txt and restart.'
     : `The model is not responding (error ${up.status}).`, (await up.text()).slice(0, 400));
 
   if (!stream) {
     const j = await up.json();
-    const text = !ANTHROPIC_KEY ? (j.choices?.[0]?.message?.content || '')
-      : j.stop_reason === 'refusal' ? DECLINED : (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+    const text = ANTHROPIC_KEY ? (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('') : (j.choices?.[0]?.message?.content || '');
     return void res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ text }));
   }
   res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
@@ -91,9 +90,8 @@ async function chat(req, res) {
           if (!line.startsWith('data:')) continue;
           try {
             const ev = JSON.parse(line.slice(5));
-            const text = ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta' ? ev.delta.text
-              : ev.type === 'message_delta' && ev.delta?.stop_reason === 'refusal' ? '\n\n' + DECLINED : '';
-            if (text) res.write('data: ' + JSON.stringify({ choices: [{ delta: { content: text } }] }) + '\n\n');
+            if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta')
+              res.write('data: ' + JSON.stringify({ choices: [{ delta: { content: ev.delta.text } }] }) + '\n\n');
           } catch {}
         }
       }
@@ -102,25 +100,50 @@ async function chat(req, res) {
   res.end();
 }
 
+// Voice: natural speech and transcription through fal (ElevenLabs). Needs FAL_KEY; without it the
+// app falls back to the browser's built-in voice and speech recognition.
+const VOICES = { nova: 'Jessica', max: 'Charlie', ada: 'Alice' };
+const json = (res, code, obj) => res.writeHead(code, { 'Content-Type': 'application/json' }).end(JSON.stringify(obj));
+async function fal(model, input) {
+  const up = await fetch('https://fal.run/' + model, {
+    method: 'POST', headers: { Authorization: 'Key ' + KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+  });
+  if (!up.ok) throw new Error(`${model} ${up.status}: ${(await up.text()).slice(0, 300)}`);
+  return up.json();
+}
+async function tts(req, res) {
+  if (!KEY) return void json(res, 503, { error: 'Voice needs FAL_KEY.' });
+  const { text, tutor } = JSON.parse(await readBody(req));
+  if (!text || typeof text !== 'string') return void json(res, 400, { error: 'No text.' });
+  const out = await fal('fal-ai/elevenlabs/tts/turbo-v2.5', { text: text.slice(0, 1200), voice: VOICES[tutor] || VOICES.nova });
+  // Pass the audio through, so the browser only ever talks to this server.
+  const audio = await fetch(out.audio.url);
+  if (!audio.ok) throw new Error('audio download ' + audio.status);
+  res.writeHead(200, { 'Content-Type': out.audio.content_type || 'audio/mpeg', 'Cache-Control': 'no-store' }).end(Buffer.from(await audio.arrayBuffer()));
+}
+async function stt(req, res) {
+  if (!KEY) return void json(res, 503, { error: 'Voice needs FAL_KEY.' });
+  const { audio } = JSON.parse(await readBody(req));
+  if (!/^data:audio\//.test(audio || '')) return void json(res, 400, { error: 'No audio.' });
+  const out = await fal('fal-ai/elevenlabs/speech-to-text', { audio_url: audio });
+  json(res, 200, { text: (out.text || '').trim() });
+}
+
 http.createServer((req, res) => {
+  const api = fn => void fn(req, res).catch(e => { try { json(res, 502, { error: String(e.message || e) }); } catch {} });
   if (req.method === 'POST' && req.url === '/api/chat') return void chat(req, res).catch(e => { try { res.writeHead(500).end(String(e)); } catch {} });
+  if (req.method === 'POST' && req.url === '/api/tts') return api(tts);
+  if (req.method === 'POST' && req.url === '/api/stt') return api(stt);
+  if (req.url === '/api/voice') return void json(res, 200, { server: !!KEY });
   let urlPath;
   try { urlPath = decodeURIComponent(req.url.split('?')[0]); } catch { return void res.writeHead(400).end('Bad request'); }
-  const root = path.join(__dirname, 'public');
-  let file = path.join(root, path.normalize(urlPath));
-  if (file !== root && !file.startsWith(root + path.sep)) return void res.writeHead(403).end();
-  fs.stat(file, (err, st) => {
-    if (!err && st.isDirectory()) {
-      // Folders such as /courses/ serve their own index.html; add the slash first so relative links resolve.
-      if (!urlPath.endsWith('/')) return void res.writeHead(302, { Location: urlPath + '/' }).end();
-      file = path.join(file, 'index.html');
-    }
-    fs.readFile(file, (err2, data) => {
-      if (err2) return void res.writeHead(404).end('Not found');
-      res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' }).end(data);
-    });
+  const file = path.join(__dirname, 'public', path.normalize(urlPath === '/' ? '/index.html' : urlPath));
+  if (!file.startsWith(path.join(__dirname, 'public'))) return void res.writeHead(403).end();
+  fs.readFile(file, (err, data) => {
+    if (err) return void res.writeHead(404).end('Not found');
+    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' }).end(data);
   });
 }).on('error', e => {
   console.error(e.code === 'EADDRINUSE' ? `Port ${PORT} is already in use. Close the other program or run with PORT=3001.` : e.message);
   process.exit(1);
-}).listen(PORT, () => { if (!KEY && !ANTHROPIC_KEY) console.warn('No API key found, so the tutor will not answer. Run: npm run key'); console.log(`Lemma running at http://localhost:${PORT}  (${ANTHROPIC_KEY ? 'Claude direct: ' + ANTHROPIC_MODEL : 'Claude via fal: ' + MODEL})`); });
+}).listen(PORT, () => { if (!KEY && !ANTHROPIC_KEY) console.warn('WARNING: no API key found. Copy .env.example to .env and add FAL_KEY.'); console.log(`Solva running at http://localhost:${PORT}  (${ANTHROPIC_KEY ? 'Claude direct: ' + ANTHROPIC_MODEL : 'Claude via fal: ' + MODEL})`); });

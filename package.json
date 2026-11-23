@@ -1,8 +1,8 @@
 {
-  "name": "lemma",
+  "name": "solva",
   "version": "0.1.0",
   "private": true,
-  "description": "Lemma — an AI study companion for math and STEM",
-  "scripts": { "start": "node server.js", "key": "node setup-key.js" },
+  "description": "Solva — an AI study companion for math and STEM",
+  "scripts": { "start": "node server.js" },
   "engines": { "node": ">=18" }
 }
