@@ -159,6 +159,7 @@ window.speechSynthesis?.getVoices();
 /* ---------- shared bits ---------- */
 function nav() {
   return `<div class="nav"><div class="logo"><i>λ</i>Lemma</div><div class="sp"></div>
+    <a class="pill courses" href="#/courses">📚 <b>Courses</b></a>
     <div class="pill fire">🔥 <b>${S.streak}</b> day${S.streak === 1 ? '' : 's'}</div>
     <div class="pill xp">⚡ <b>${S.xp}</b> XP</div>
     <img class="me" src="${T().img}" title="Change tutor or start over" alt="${T().name}"></div>`;
@@ -225,6 +226,7 @@ function home() {
     <div class="hero"><img src="${pic(S.plan ? 'cheer' : '')}" alt="${t.name}"><div class="say"><h2>${greet[0]}</h2><p>${greet[1]}</p>
       <div class="cta">${S.plan ? `<button class="btn go" id="h-next">Continue my plan</button>` : p.situation === 'failed'
         ? `<button class="btn go" id="h-come">Talk to ${t.name}</button>` : `<button class="btn go" id="h-solve">Solve a problem</button>`}</div></div></div>
+    <div id="courses-slot"></div>
     <div class="sec">What do you need?</div>
     <div class="acts">
       <button class="act a1" id="a-solve"><svg viewBox="0 0 120 120"><circle cx="78" cy="42" r="34" fill="#7A5AF8"/><rect x="18" y="52" width="44" height="44" rx="10" fill="#15141B"/><path d="M30 74h20M40 64v20" stroke="#FFC83D" stroke-width="5" stroke-linecap="round"/></svg>
@@ -251,6 +253,7 @@ function home() {
   $$('.node').forEach(n => n.onclick = () => n.dataset.day != null ? practice(S.plan.days[+n.dataset.day].focus, +n.dataset.day) : practice(n.dataset.topic));
   $('.me').onclick = () => { if (confirm('Pick a new tutor? Your XP, streak and memory are kept.')) onboarding(2, { ...S.profile }); };
   $('.logo').onclick = landing;
+  window.Courses?.homeCard($('#courses-slot'));
 }
 
 /* ---------- tutor session (chat) ---------- */
@@ -575,6 +578,9 @@ function landing() {
   $$('[data-start]').forEach(b => b.onclick = start);
   window.scrollTo(0, 0);
 }
+
+/* ---------- bridge for the courses + levels module (public/courses/) ---------- */
+window.Lemma = { S, save, touchStreak, nav, home, landing, T, pic, confetti };
 
 /* ---------- boot ---------- */
 S.profile ? home() : landing();
