@@ -37,10 +37,10 @@ const CONTENT = {
     plot: { x: [-1.5, 2.5], y: [-1.5, 5], curves: [x => x * x, x => 2 * x - 1], points: [[1, 1]] },
   },
   'Integrals': {
-    key: ['$\\displaystyle\\int x^n\\,dx=\\frac{x^{n+1}}{n+1}+C$', '$\\displaystyle\\int_a^b f(x)\\,dx=F(b)-F(a)$', '$\\displaystyle\\int u\\,dv=uv-\\int v\\,du$'],
+    key: ['$\\displaystyle\\int x^n\\,dx=\\frac{x^{n+1}}{n+1}+C\\quad(n\\neq-1)$', '$\\displaystyle\\int_a^b f(x)\\,dx=F(b)-F(a)$', '$\\displaystyle\\int u\\,dv=uv-\\int v\\,du$'],
     ex: { q: 'Evaluate $\\displaystyle\\int_0^2 3x^2\\,dx$', steps: ['Antiderivative: $x^3$', '$2^3-0^3$'], a: '$8$' },
     check: { q: 'Evaluate $\\displaystyle\\int_0^1 (2x+1)\\,dx$', c: ['$1$', '$3$', '$2$', '$\\tfrac32$'], a: 2, why: '$\\big[x^2+x\\big]_0^1$' },
-    plot: { x: [0, 2.3], y: [0, 14], curves: [x => 3 * x * x], fill: { f: x => 3 * x * x, from: 0, to: 2 } },
+    plot: { x: [0, 2.3], y: [0, 16], curves: [x => 3 * x * x], fill: { f: x => 3 * x * x, from: 0, to: 2 } },
   },
   'Probability': {
     key: ['$P(A\\cup B)=P(A)+P(B)-P(A\\cap B)$', '$P(A\\mid B)=\\dfrac{P(A\\cap B)}{P(B)}$', '$\\dbinom{n}{k}=\\dfrac{n!}{k!\\,(n-k)!}$'],
@@ -94,25 +94,25 @@ const CONTENT = {
     check: { q: 'Balanced $\\mathrm{C_3H_8+O_2\\to CO_2+H_2O}$. Coefficient of $\\mathrm{O_2}$?', c: ['$3$', '$4$', '$5$', '$7$'], a: 2, why: '$\\mathrm{C_3H_8+5O_2\\to 3CO_2+4H_2O}$' },
   },
   'Atomic structure': {
-    key: ['$A=Z+N$', 'Shell $n$ holds $2n^2$ electrons', '$E=hf$'],
+    key: ['$A=Z+N$', 'Shell $n$ holds up to $2n^2$ electrons', '$E=hf$'],
     ex: { q: 'Neutrons in $^{23}_{11}\\mathrm{Na}$?', steps: ['$A=23,\\ Z=11$', '$N=A-Z$'], a: '$12$' },
-    check: { q: 'Electron shells of chlorine ($Z=17$)?', c: ['$2,8,7$', '$2,8,8$', '$2,7,8$', '$8,8,1$'], a: 0, why: '$2+8+7=17$' },
+    check: { q: 'Electron shells of chlorine ($Z=17$)?', c: ['$2,8,7$', '$2,8,8$', '$2,7,8$', '$8,8,1$'], a: 0, why: 'Fill inner shells first: $2$, then $8$, leaving $7$' },
   },
   'Acids & bases': {
-    key: ['$\\mathrm{pH}=-\\log[\\mathrm{H^+}]$', '$\\mathrm{pH}+\\mathrm{pOH}=14$', '$K_w=[\\mathrm{H^+}][\\mathrm{OH^-}]=10^{-14}$'],
+    key: ['$\\mathrm{pH}=-\\log[\\mathrm{H^+}]$', '$\\mathrm{pH}+\\mathrm{pOH}=14$ at $25\\ ^\\circ\\text{C}$', '$K_w=[\\mathrm{H^+}][\\mathrm{OH^-}]=10^{-14}$ at $25\\ ^\\circ\\text{C}$'],
     ex: { q: 'pH of $0.01\\ \\text{M}$ HCl?', steps: ['Strong acid: $[\\mathrm{H^+}]=10^{-2}$', '$-\\log(10^{-2})$'], a: '$\\mathrm{pH}=2$' },
     check: { q: 'A solution has pH $9$. Its pOH?', c: ['$5$', '$9$', '$23$', '$-5$'], a: 0, why: '$14-9$' },
   },
   'Thermochemistry': {
     key: ['$q=mc\\,\\Delta T$', '$\\Delta H=H_{\\text{products}}-H_{\\text{reactants}}$', '$\\Delta G=\\Delta H-T\\,\\Delta S$'],
-    ex: { q: 'Heat to warm $100\\ \\text{g}$ of water by $10\\ ^\\circ\\text{C}$? ($c=4.18$)', steps: ['$q=mc\\,\\Delta T$', '$100\\times4.18\\times10$'], a: '$4180\\ \\text{J}$' },
+    ex: { q: 'Heat to warm $100\\ \\text{g}$ of water by $10\\ ^\\circ\\text{C}$? ($c=4.18\\ \\text{J/(g}\\cdot{}^\\circ\\text{C)}$)', steps: ['$q=mc\\,\\Delta T$', '$100\\times4.18\\times10$'], a: '$4180\\ \\text{J}$' },
     check: { q: '$\\Delta H=-50\\ \\text{kJ}$. The reaction is…', c: ['Endothermic', 'Exothermic', 'At equilibrium', 'Impossible'], a: 1, why: 'Negative $\\Delta H$ releases heat' },
   },
   'Equilibrium': {
     key: ['$K_c=\\dfrac{[C]^c[D]^d}{[A]^a[B]^b}$', '$Q<K \\Rightarrow$ forward', '$Q>K \\Rightarrow$ reverse'],
     ex: { q: '$\\mathrm{N_2O_4\\rightleftharpoons 2NO_2}$ with $[\\mathrm{NO_2}]=0.2$, $[\\mathrm{N_2O_4}]=0.1$. $K_c$?', steps: ['$K_c=\\dfrac{[\\mathrm{NO_2}]^2}{[\\mathrm{N_2O_4}]}$', '$\\dfrac{0.2^2}{0.1}$'], a: '$0.4$' },
     check: { q: 'If $Q<K$, the reaction shifts…', c: ['Toward reactants', 'Nowhere', 'Toward products', 'Until $K$ changes'], a: 2, why: 'Too few products so far' },
-    plot: { x: [0, 5], y: [0, 1.1], curves: [t => 0.4 + 0.6 * E(-t), t => 0.6 * (1 - E(-t))] },
+    plot: { x: [0, 5], y: [0, 0.25], curves: [t => 0.1 + 0.1 * E(-t), t => 0.2 * (1 - E(-t))] }, // N2O4 falls 0.2 to 0.1 while NO2 rises 0 to 0.2
   },
 
   /* ---------- Statistics ---------- */
@@ -130,7 +130,7 @@ const CONTENT = {
     key: ['$z=\\dfrac{x-\\mu}{\\sigma}$', '$68\\%,\\ 95\\%,\\ 99.7\\%$ within $1,\\ 2,\\ 3\\ \\sigma$', '$\\bar X\\sim N\\!\\left(\\mu,\\ \\dfrac{\\sigma^2}{n}\\right)$'],
     ex: { q: 'Scores are $N(70,\\ 10^2)$. The $z$-score of $85$?', steps: ['$z=\\dfrac{x-\\mu}{\\sigma}$', '$\\dfrac{85-70}{10}$'], a: '$z=1.5$' },
     check: { q: 'Share of values within $2\\sigma$ of the mean?', c: ['$68\\%$', '$95\\%$', '$99.7\\%$', '$50\\%$'], a: 1, why: 'The 68–95–99.7 rule' },
-    plot: { x: [-3.5, 3.5], y: [0, 0.45], curves: [bell], fill: { f: bell, from: -1, to: 1 } },
+    plot: { x: [-3.5, 3.5], y: [0, 0.45], curves: [bell], fill: { f: bell, from: -2, to: 2 } },
   },
   'Hypothesis tests': {
     key: ['$z=\\dfrac{\\bar x-\\mu_0}{\\sigma/\\sqrt n}$', '$p<\\alpha \\Rightarrow$ reject $H_0$', 'Type I error: rejecting a true $H_0$'],
@@ -163,13 +163,47 @@ const CONTENT = {
     check: { q: 'What is $1010_2$ in decimal?', c: ['$5$', '$12$', '$10$', '$20$'], a: 2, why: '$8+2$' },
   },
   'Sorting': {
-    key: ['Merge sort: $O(n\\log n)$ always', 'Quicksort: $O(n\\log n)$ average, $O(n^2)$ worst', 'Bubble sort: $O(n^2)$'],
+    key: ['Merge sort: $O(n\\log n)$ always', 'Quicksort: $O(n\\log n)$ average, $O(n^2)$ worst', 'Bubble sort: $O(n^2)$ average and worst'],
     ex: { q: 'One bubble-sort pass over $[3,\\ 1,\\ 2]$', steps: ['Swap $3,1$: $[1,\\ 3,\\ 2]$', 'Swap $3,2$: $[1,\\ 2,\\ 3]$'], a: '$[1,\\ 2,\\ 3]$' },
     check: { q: 'Which sort is $O(n\\log n)$ even in the worst case?', c: ['Bubble sort', 'Quicksort', 'Merge sort', 'Insertion sort'], a: 2, why: 'It always splits in half' },
   },
   'Graphs & trees': {
-    key: ['A tree with $n$ nodes has $n-1$ edges', 'BFS uses a queue and finds shortest paths', 'Balanced BST search: $O(\\log n)$'],
-    ex: { q: 'BFS from A on edges A–B, A–C, B–D. Visit order?', steps: ['Visit A, queue B and C', 'Visit B, queue D, then visit C'], a: 'A, B, C, D' },
+    key: ['A tree with $n$ nodes has $n-1$ edges', 'BFS uses a queue and finds shortest paths in unweighted graphs', 'Balanced BST search: $O(\\log n)$'],
+    ex: { q: 'BFS from A on edges A–B, A–C, B–D, taking neighbours alphabetically. Visit order?', steps: ['Visit A, queue B and C', 'Visit B, queue D, then visit C'], a: 'A, B, C, D' },
     check: { q: 'How many edges does a tree with $10$ nodes have?', c: ['$9$', '$10$', '$11$', '$45$'], a: 0, why: '$n-1$' },
   },
+};
+
+/* Today's problem: one extra question per topic, separate from the study card's quick check. Same shape as `check`. */
+const U = (n, u) => `$${n}\\ \\text{${u}}$`, A2 = n => `$${n}\\ \\text{m/s}^2$`, P = n => `$${n}\\ \\text{kg}\\cdot\\text{m/s}$`;
+const DAILY = {
+  'Linear equations': { q: 'Solve $2(x+3)=x-4$', c: ['$x=-10$', '$x=-2$', '$x=10$', '$x=-7$'], a: 0, why: '$2x+6=x-4$' },
+  'Quadratics': { q: 'The $x$-coordinate of the vertex of $y=x^2-6x+5$?', c: ['$-3$', '$5$', '$3$', '$6$'], a: 2, why: '$-\\tfrac{b}{2a}=\\tfrac62$' },
+  'Functions & graphs': { q: '$f(x)=3x-2$. Find $f^{-1}(7)$', c: ['$19$', '$3$', '$\\tfrac53$', '$-3$'], a: 1, why: 'Solve $3x-2=7$' },
+  'Trigonometry': { q: 'Exact value of $\\tan\\tfrac{\\pi}{4}$?', c: ['$\\tfrac{\\sqrt3}{2}$', '$\\tfrac12$', '$\\sqrt3$', '$1$'], a: 3, why: '$\\sin$ and $\\cos$ are equal there' },
+  'Derivatives': { q: 'Differentiate $\\sin(3x)$', c: ['$\\cos(3x)$', '$3\\cos(3x)$', '$-3\\cos(3x)$', '$3\\sin(3x)$'], a: 1, why: 'Chain rule: the inner derivative is $3$' },
+  'Integrals': { q: 'Find $\\displaystyle\\int 4x^3\\,dx$', c: ['$12x^2+C$', '$4x^4+C$', '$\\tfrac{x^4}{4}+C$', '$x^4+C$'], a: 3, why: '$\\tfrac{4x^4}{4}$' },
+  'Probability': { q: 'One card from a 52-card deck. $P(\\text{ace or king})$?', c: ['$\\tfrac1{13}$', '$\\tfrac2{13}$', '$\\tfrac1{26}$', '$\\tfrac4{13}$'], a: 1, why: '$8$ of $52$ cards' },
+  'Kinematics': { q: 'A car brakes from $20\\ \\text{m/s}$ to rest in $4\\ \\text{s}$. Acceleration, taking the direction of motion as positive?', c: [A2(-5), A2(-80), A2(5), A2(-0.2)], a: 0, why: '$a=\\tfrac{v-u}{t}$' },
+  "Newton's laws": { q: 'Weight of a $5\\ \\text{kg}$ mass? ($g=10\\ \\text{m/s}^2$)', c: [U(5, 'N'), U(0.5, 'N'), U(50, 'N'), U(15, 'N')], a: 2, why: '$W=mg$' },
+  'Energy & work': { q: 'A $10\\ \\text{N}$ force moves a box $3\\ \\text{m}$ along its direction. Work done?', c: [U(3.3, 'J'), U(30, 'J'), U(13, 'J'), U(300, 'J')], a: 1, why: '$W=Fd$' },
+  'Momentum': { q: 'A $4\\ \\text{N}$ force acts for $3\\ \\text{s}$. Change in momentum?', c: [P(12), P(1.3), P(7), P(0.75)], a: 0, why: '$\\Delta p=F\\,\\Delta t$' },
+  'Circuits': { q: 'Power of a $12\\ \\text{V}$ bulb drawing $2\\ \\text{A}$?', c: [U(6, 'W'), U(24, 'W'), U(14, 'W'), U(48, 'W')], a: 1, why: '$P=IV$' },
+  'Waves': { q: 'A wave has $f=5\\ \\text{Hz}$ and $\\lambda=2\\ \\text{m}$. Speed?', c: [U(2.5, 'm/s'), U(7, 'm/s'), U(0.4, 'm/s'), U(10, 'm/s')], a: 3, why: '$v=f\\lambda$' },
+  'Moles & stoichiometry': { q: 'Moles of NaCl in $500\\ \\text{mL}$ of a $0.2\\ \\text{M}$ solution?', c: [U(0.1, 'mol'), U(100, 'mol'), U(0.4, 'mol'), U(2.5, 'mol')], a: 0, why: '$n=cV=0.2\\times0.5$' },
+  'Balancing equations': { q: 'Balanced $\\mathrm{H_2+Cl_2\\to HCl}$. Coefficient of HCl?', c: ['$1$', '$2$', '$3$', '$4$'], a: 1, why: '$\\mathrm{H_2+Cl_2\\to 2HCl}$' },
+  'Atomic structure': { q: 'Most electrons shell $n=3$ can hold?', c: ['$8$', '$9$', '$18$', '$32$'], a: 2, why: '$2n^2=2\\times9$' },
+  'Acids & bases': { q: 'pH of a solution with $[\\mathrm{H^+}]=10^{-5}\\ \\text{M}$?', c: ['$-5$', '$9$', '$10$', '$5$'], a: 3, why: '$-\\log(10^{-5})$' },
+  'Thermochemistry': { q: 'At constant temperature and pressure, $\\Delta G<0$ means the reaction is…', c: ['Spontaneous', 'At equilibrium', 'Non-spontaneous', 'Always endothermic'], a: 0, why: 'Negative $\\Delta G$ favours products' },
+  'Equilibrium': { q: '$\\mathrm{A\\rightleftharpoons B}$ with $[\\mathrm{A}]=0.5$ and $[\\mathrm{B}]=2$ at equilibrium. $K_c$?', c: ['$0.25$', '$1$', '$2.5$', '$4$'], a: 3, why: '$\\tfrac{[\\mathrm{B}]}{[\\mathrm{A}]}=\\tfrac{2}{0.5}$' },
+  'Mean & variance': { q: 'A sample has variance $9$. Its standard deviation?', c: ['$81$', '$4.5$', '$3$', '$18$'], a: 2, why: '$s=\\sqrt9$' },
+  'Probability rules': { q: '$P(A)=0.7$. Find $P(\\text{not }A)$', c: ['$0.7$', '$0.3$', '$1.7$', '$0.49$'], a: 1, why: '$1-0.7$' },
+  'Normal distribution': { q: 'Share of values within $1\\sigma$ of the mean?', c: ['$50\\%$', '$95\\%$', '$68\\%$', '$99.7\\%$'], a: 2, why: 'The 68–95–99.7 rule' },
+  'Hypothesis tests': { q: '$p=0.20$ and $\\alpha=0.05$. Decision?', c: ['Reject $H_0$', 'Fail to reject $H_0$', '$H_1$ is proven', '$H_0$ is proven true'], a: 1, why: '$0.20>0.05$' },
+  'Regression': { q: 'Fitted line $\\hat y=5-2x$. When $x$ rises by $1$, $\\hat y$…', c: ['rises by $5$', 'rises by $2$', 'falls by $2$', 'falls by $5$'], a: 2, why: 'The slope is $-2$' },
+  'Big-O complexity': { q: 'Tightest worst-case bound for a linear search through $n$ items?', c: ['$O(1)$', '$O(\\log n)$', '$O(n)$', '$O(n^2)$'], a: 2, why: 'It may check every item' },
+  'Recursion': { q: 'What does $\\text{fact}(5)$ return?', c: ['$20$', '$60$', '$720$', '$120$'], a: 3, why: '$5\\cdot4\\cdot3\\cdot2\\cdot1$' },
+  'Binary & logic': { q: 'Write $7$ in binary', c: ['$101_2$', '$111_2$', '$110_2$', '$1000_2$'], a: 1, why: '$4+2+1$' },
+  'Sorting': { q: 'Tightest worst-case bound for bubble sort?', c: ['$O(n)$', '$O(n\\log n)$', '$O(n^2)$', '$O(2^n)$'], a: 2, why: 'Every pair may be compared' },
+  'Graphs & trees': { q: 'Most nodes a binary tree with $3$ levels can have?', c: ['$3$', '$6$', '$8$', '$7$'], a: 3, why: '$1+2+4$' },
 };
