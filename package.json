@@ -3,6 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "description": "Lemma — an AI study companion for math and STEM",
-  "scripts": { "start": "node server.js" },
+  "scripts": { "start": "node server.js", "key": "node setup-key.js" },
   "engines": { "node": ">=18" }
 }

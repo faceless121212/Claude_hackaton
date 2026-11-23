@@ -28,10 +28,10 @@ XP and streak are shared: what you earn with the tutor and in courses adds up to
 Requires Node.js 18 or newer. There is nothing to install.
 
 ```bash
-cp .env.example .env
+npm run key
 ```
 
-Put your key in `.env` (either `FAL_KEY`, or `ANTHROPIC_API_KEY` to call Claude directly), then:
+This creates `.env` and opens it in a text editor. Paste your key there (either `FAL_KEY`, or `ANTHROPIC_API_KEY` to call Claude directly), save, then:
 
 ```bash
 npm start
