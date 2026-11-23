@@ -76,8 +76,14 @@ async function chat(req, res) {
           body: JSON.stringify({ model: fast ? VOICE_MODEL : MODEL, messages: [{ role: 'system', content: system }, ...messages], max_tokens, stream, reasoning: { effort: 'low' } }),
         });
   } catch (e) { return void fail(502, 'Cannot reach the model: ' + e.message); }
-  if (!up.ok) return void fail(502, up.status === 401 || up.status === 403 ? 'The API key was rejected. Check the key in .env or keys.txt and restart.'
-    : `The model is not responding (error ${up.status}).`, (await up.text()).slice(0, 400));
+  if (!up.ok) {
+    // Say why in the terminal: the provider's own message tells a wrong key from a key without access to the model.
+    const detail = (await up.text()).slice(0, 400);
+    console.error(`Model request failed (${up.status}) for ${ANTHROPIC_KEY ? model : fast ? VOICE_MODEL : MODEL}: ${detail}`);
+    return void fail(502, up.status === 401 ? 'The API key was rejected. Check the key in .env or keys.txt and restart.'
+      : up.status === 403 ? 'This key is not allowed to use the model. The terminal shows why.'
+      : `The model is not responding (error ${up.status}).`, detail);
+  }
 
   if (!stream) {
     const j = await up.json();
@@ -155,4 +161,6 @@ http.createServer((req, res) => {
 }).on('error', e => {
   console.error(e.code === 'EADDRINUSE' ? `Port ${PORT} is already in use. Close the other program or run with PORT=3001.` : e.message);
   process.exit(1);
-}).listen(PORT, () => { if (!KEY && !ANTHROPIC_KEY) console.warn('No API key found, so the tutor will not answer. Run: npm run key'); console.log(`Solva running at http://localhost:${PORT}  (${ANTHROPIC_KEY ? 'Claude direct: ' + ANTHROPIC_MODEL : 'Claude via fal: ' + MODEL})`); });
+}).listen(PORT, () => { if (!KEY && !ANTHROPIC_KEY) console.warn('No API key found, so the tutor will not answer. Run: npm run key'); console.log(`Solva running at http://localhost:${PORT}  (${ANTHROPIC_KEY ? 'Claude direct: ' + ANTHROPIC_MODEL : 'Claude via fal: ' + MODEL})`);
+  // Enough of the key to spot a wrong paste, never the whole thing.
+  const used = ANTHROPIC_KEY || KEY; if (used) console.log(`Key in use: ${used.slice(0, 10)}... (${used.length} characters)`); });
