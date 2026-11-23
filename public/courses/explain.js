@@ -14,14 +14,14 @@ function reference(level) {
 }
 
 async function grade(course, level, text) {
-  const tutor = window.Lemma.T();
+  const tutor = window.Solva.T();
   const system = `You are ${tutor.name}, an AI tutor. Personality: ${tutor.style}
 A student just finished a course level and is explaining it back in their own words. It was spoken aloud and transcribed, so ignore transcription glitches, filler words and grammar. Judge understanding, not polish. Be specific, kind and honest: never praise something they did not say.
 Return ONLY a JSON object, no other text:
 {"score": <0-100>, "headline": "<at most 5 words>", "nailed": ["<up to 3 short points they got right>"], "missing": ["<up to 3 key ideas left out or wrong>"], "fix": "<one sentence: the single most useful correction or addition>", "say": "<2 short sentences spoken to the student in your voice: react to what they said, then give one pointer. Plain words, no symbols.>"}
 Scoring: the student has about 30 seconds, so they cannot cover everything. Score whether what they said shows real understanding of the level's central idea, not how much of the level they recited. 80+ means the central idea is right with a reason or an example. 70-79 means the central idea is right but thin. 40-69 means vague or partly wrong. Below 40 means mostly missing or wrong. An empty or off-topic answer scores under 20. Parts of the level they simply did not mention go in "missing" but do not pull a correct explanation below 70.`;
   const user = `Course: ${course.title}\nLevel: ${level.title} — ${level.summary}\n\nWhat the level taught:\n${reference(level)}\n\nThe student's explanation:\n"""${text}"""`;
-  const raw = await window.Lemma.ask(system, [{ role: 'user', content: user }], 700);
+  const raw = await window.Solva.ask(system, [{ role: 'user', content: user }], 700);
   const json = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
   const list = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x.trim()).slice(0, 3) : []);
   return {
@@ -38,9 +38,9 @@ export function renderExplain(root, course, levelIndex) {
   if (!level || status !== 'done') { location.hash = course ? `#/course/${course.id}` : '#/courses'; return; }
 
   const Voice = window.Voice;
-  const lemma = window.Lemma;
-  const tutorId = lemma.S.profile?.tutor || 'nova';
-  const tutor = lemma.T();
+  const solva = window.Solva;
+  const tutorId = solva.S.profile?.tutor || 'nova';
+  const tutor = solva.T();
   const ask = `Teach me! Explain "${level.title}" in your own words, as if I were a friend who has never heard of it. Say what it is, why it matters, and give one example.`;
   let mouth = () => {};
   let alive = true;
@@ -163,7 +163,7 @@ export function renderExplain(root, course, levelIndex) {
         <button class="btn btn-ghost" id="again">${passed ? 'Explain again' : 'Try again'}</button>
       </div>`);
     $('#again').onclick = () => intro('Have another go. Say it your way.');
-    if (passed && (award.first || award.leveledUp)) lemma.confetti();
+    if (passed && (award.first || award.leveledUp)) solva.confetti();
     say(res.say || res.headline);
   }
 

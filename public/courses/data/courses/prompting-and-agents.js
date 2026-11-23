@@ -5,7 +5,7 @@ export default {
   tagline: 'Write prompts that work and build agents that act',
   description:
     'Practice the techniques that get reliable results from language models: clear instructions, examples, step-by-step reasoning, and tool-using agents.',
-  icon: '🤖',
+  icon: '<img class="ico" src="/img/c-prompting-and-agents.webp" alt="">',
   color: '#00b894',
   difficulty: 'Intermediate',
   isNew: true,

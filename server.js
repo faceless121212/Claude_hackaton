@@ -1,13 +1,16 @@
-// Lemma — zero-dependency server. Serves ./public and proxies chat to Claude via fal's OpenRouter endpoint.
+// Solva — zero-dependency server. Serves ./public and proxies chat to Claude via fal's OpenRouter endpoint.
 const http = require('http'), fs = require('fs'), path = require('path');
 
 // Minimal .env loader (FAL_KEY=..., MODEL=..., PORT=...)
-try {
-  for (const line of fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('\n')) {
-    const m = line.match(/^\s*([A-Z_]+)\s*=\s*(.*)\s*$/);
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
-  }
-} catch {}
+// Keys can live in .env or in keys.txt (same KEY=value format); both are git-ignored.
+for (const file of ['.env', 'keys.txt']) {
+  try {
+    for (const line of fs.readFileSync(path.join(__dirname, file), 'utf8').split('\n')) {
+      const m = line.match(/^\s*([A-Z_]+)\s*=\s*(.*)\s*$/);
+      if (m && m[2].trim() && !process.env[m[1]]) process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, '');
+    }
+  } catch {}
+}
 
 const PORT = process.env.PORT || 3000;
 const KEY = process.env.FAL_KEY || '';
@@ -63,7 +66,8 @@ async function chat(req, res) {
           body: JSON.stringify({ model: MODEL, messages: [{ role: 'system', content: system }, ...messages], max_tokens, stream, reasoning: { effort: 'low' } }),
         });
   } catch (e) { return void fail(502, 'Cannot reach the model: ' + e.message); }
-  if (!up.ok) return void fail(502, `Model error ${up.status}`, (await up.text()).slice(0, 400));
+  if (!up.ok) return void fail(502, up.status === 401 || up.status === 403 ? 'The API key was rejected. Check the key in .env or keys.txt and restart.'
+    : `The model is not responding (error ${up.status}).`, (await up.text()).slice(0, 400));
 
   if (!stream) {
     const j = await up.json();
@@ -128,7 +132,8 @@ http.createServer((req, res) => {
   if (req.method === 'POST' && req.url === '/api/tts') return api(tts);
   if (req.method === 'POST' && req.url === '/api/stt') return api(stt);
   if (req.url === '/api/voice') return void json(res, 200, { server: !!KEY });
-  const urlPath = decodeURIComponent(req.url.split('?')[0]);
+  let urlPath;
+  try { urlPath = decodeURIComponent(req.url.split('?')[0]); } catch { return void res.writeHead(400).end('Bad request'); }
   const file = path.join(__dirname, 'public', path.normalize(urlPath === '/' ? '/index.html' : urlPath));
   if (!file.startsWith(path.join(__dirname, 'public'))) return void res.writeHead(403).end();
   fs.readFile(file, (err, data) => {
@@ -138,4 +143,4 @@ http.createServer((req, res) => {
 }).on('error', e => {
   console.error(e.code === 'EADDRINUSE' ? `Port ${PORT} is already in use. Close the other program or run with PORT=3001.` : e.message);
   process.exit(1);
-}).listen(PORT, () => { if (!KEY && !ANTHROPIC_KEY) console.warn('WARNING: no API key found. Copy .env.example to .env and add FAL_KEY.'); console.log(`Lemma running at http://localhost:${PORT}  (${ANTHROPIC_KEY ? 'Claude direct: ' + ANTHROPIC_MODEL : 'Claude via fal: ' + MODEL})`); });
+}).listen(PORT, () => { if (!KEY && !ANTHROPIC_KEY) console.warn('WARNING: no API key found. Copy .env.example to .env and add FAL_KEY.'); console.log(`Solva running at http://localhost:${PORT}  (${ANTHROPIC_KEY ? 'Claude direct: ' + ANTHROPIC_MODEL : 'Claude via fal: ' + MODEL})`); });

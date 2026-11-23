@@ -4,7 +4,7 @@ export default {
   category: 'cs',
   tagline: 'Search, sort, and reason about speed like a pro',
   description: 'Discover the classic ideas behind fast software by counting steps yourself. Explore searching, sorting, and the intuition behind big-O.',
-  icon: '⚙️',
+  icon: '<img class="ico" src="/img/c-algorithms-basics.webp" alt="">',
   color: '#6366f1',
   difficulty: 'Intermediate',
   isNew: false,

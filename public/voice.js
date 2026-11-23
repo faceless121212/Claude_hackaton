@@ -1,4 +1,4 @@
-// Lemma voice engine (window.Voice).
+// Solva voice engine (window.Voice).
 // - speak / speaker: natural tutor voices through the server (/api/tts), sentence by sentence so the
 //   first words play while the rest is still being written. Reports audio level for mascot animation.
 // - listen: records the microphone, stops on silence, transcribes on the server (/api/stt) so it works
@@ -224,7 +224,9 @@
   /** Markup for an animated mascot. The talk frame (mouth open) is optional: it is removed if the image is missing. */
   function mascot(tutor, mood = '') {
     const base = `/img/${tutor}${mood ? '-' + mood : ''}.webp`;
-    return `<div class="mascot" data-s="idle"><img class="m-base" src="${base}" alt=""><img class="m-talk" src="/img/${tutor}-talk.webp" alt="" onerror="this.remove()"></div>`;
+    // The talk frame is drawn from the neutral pose, so it is only used with the neutral face.
+    const talk = mood ? '' : `<img class="m-talk" data-talk src="/img/${tutor}-talk.webp" alt="" onerror="this.remove()">`;
+    return `<div class="mascot" data-s="idle"><img class="m-base" data-face src="${base}" alt="">${talk}</div>`;
   }
   /** Returns a function that feeds an audio level (0..1) to a mascot element: bounce + mouth open/closed. */
   function animator(el) {

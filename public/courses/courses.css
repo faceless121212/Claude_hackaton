@@ -1,5 +1,5 @@
 /* Courses + levels screens. This sheet is adopted into shadow roots only (see app.js), so the
-   class names here never collide with Lemma's. Lemma's design tokens (--bg, --ink, --muted,
+   class names here never collide with Solva's. Solva's design tokens (--bg, --ink, --muted,
    --line, --green, --purple, --head ...) are inherited from the page. */
 :host {
   --surface: var(--card, #fff);
@@ -31,7 +31,7 @@ button, input { font: inherit; color: inherit; }
 :focus-visible { outline: 3px solid color-mix(in srgb, var(--brand) 60%, transparent); outline-offset: 2px; }
 code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .9em; background: color-mix(in srgb, var(--ink) 8%, transparent); padding: .1em .35em; border-radius: 6px; }
 
-/* ---- tab bar (sits under Lemma's nav) ---- */
+/* ---- tab bar (sits under Solva's nav) ---- */
 .subbar { display: flex; align-items: center; gap: 8px; margin-bottom: 22px; }
 .tab { padding: 9px 18px; border-radius: 14px; font-weight: 700; border: 2px solid var(--line); background: var(--surface); box-shadow: 0 3px 0 var(--line); }
 .tab:hover { border-color: #cfcbc0; }
@@ -306,6 +306,9 @@ a.node:active { transform: translateY(7px); box-shadow: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* generated course art (public/img/c-*.webp) used in place of emoji; sized by the surrounding font-size */
+.ico { width: 1.35em; height: 1.35em; object-fit: contain; vertical-align: -.32em; }
 
 /* ---- create a course ---- */
 textarea { font: inherit; color: inherit; }

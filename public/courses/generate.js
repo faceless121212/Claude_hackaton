@@ -4,7 +4,7 @@
 // into HTML unescaped) never come from the model unchecked.
 import { COURSES, addCourse } from './data/index.js';
 
-const lemma = window.Lemma;
+const solva = window.Solva;
 
 const DIFFICULTIES = ['Beginner', 'Intermediate', 'Advanced'];
 const IDEAS = ['Eigenvalues and eigenvectors', 'Bayes’ theorem', 'Big-O notation', 'How vaccines work'];
@@ -25,8 +25,8 @@ let error = '';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const onScreen = () => !!view?.isConnected && location.hash.startsWith('#/create');
-const tutorName = () => { try { return lemma.T().name || 'Your tutor'; } catch { return 'Your tutor'; } };
-const mascot = (mood) => { try { return lemma.pic(mood); } catch { return ''; } };
+const tutorName = () => { try { return solva.T().name || 'Your tutor'; } catch { return 'Your tutor'; } };
+const mascot = (mood) => { try { return solva.pic(mood); } catch { return ''; } };
 
 export function renderCreate(root) {
   view = root;
@@ -184,7 +184,7 @@ async function generate() {
     const { system, user } = buildPrompt(request);
     const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('timeout')), TIMEOUT_MS); });
     const text = await Promise.race([
-      lemma.stream(system, [{ role: 'user', content: user }], (full) => {
+      solva.stream(system, [{ role: 'user', content: user }], (full) => {
         if (job !== mine) return;
         mine.text = full;
         if (onScreen()) updateWorking();
@@ -219,11 +219,11 @@ function friendly(e) {
 // ---- prompt -----------------------------------------------------------------
 
 function buildPrompt({ topic, notes, difficulty }) {
-  const learner = lemma.S?.profile;
+  const learner = solva.S?.profile;
   const audience = learner?.level ? ` The learner is at ${String(learner.level).slice(0, 40)} level.` : '';
   const source = notes.trim().slice(0, NOTES_MAX);
 
-  const system = `You write short interactive courses for Lemma, a learn-by-doing study app (think Brilliant or Duolingo for STEM). You reply with ONE JSON object and nothing else: no prose before or after it, no markdown code fences.
+  const system = `You write short interactive courses for Solva, a learn-by-doing study app (think Brilliant or Duolingo for STEM). You reply with ONE JSON object and nothing else: no prose before or after it, no markdown code fences.
 
 SHAPE (use exactly these keys, in this order):
 {

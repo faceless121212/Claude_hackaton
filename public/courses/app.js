@@ -3,10 +3,10 @@ import * as progress from './progress.js';
 import { renderCreate } from './generate.js';
 import { renderExplain } from './explain.js';
 
-// Courses + levels for Lemma. Lemma's own screens render straight into #app; ours render into a
-// shadow root inside it, so the two stylesheets can never collide. `window.Lemma` is the bridge
+// Courses + levels for Solva. Solva's own screens render straight into #app; ours render into a
+// shadow root inside it, so the two stylesheets can never collide. `window.Solva` is the bridge
 // exported at the bottom of public/app.js.
-const lemma = window.Lemma;
+const solva = window.Solva;
 const outer = document.getElementById('app');
 const sheet = new CSSStyleSheet();
 sheet.replaceSync(await (await fetch(new URL('./courses.css', import.meta.url))).text());
@@ -20,12 +20,12 @@ function shadowFor(host) {
   return shadow;
 }
 
-/** Build the page frame: Lemma's nav on top (unless full-screen), our screen below. */
+/** Build the page frame: Solva's nav on top (unless full-screen), our screen below. */
 function frame(fullscreen) {
-  const tutor = lemma.S.profile?.tutor || 'nova';
+  const tutor = solva.S.profile?.tutor || 'nova';
   outer.innerHTML = fullscreen
     ? '<div id="courses-host" style="flex:1;display:flex;flex-direction:column"></div>'
-    : `<div class="wrap t-${tutor}">${lemma.nav()}<div id="courses-host"></div></div>`;
+    : `<div class="wrap t-${tutor}">${solva.nav()}<div id="courses-host"></div></div>`;
   const shadow = shadowFor(outer.querySelector('#courses-host'));
   shadow.innerHTML = `<div class="sk ${fullscreen ? 'sk-full' : ''}">${fullscreen ? '' : '<nav class="subbar"></nav>'}<main id="view"></main></div>`;
   app = shadow.querySelector('#view');
@@ -37,6 +37,7 @@ function frame(fullscreen) {
 
 // ---- helpers ----------------------------------------------------------------
 
+const ico = (name) => `<img class="ico" src="/img/${name}.webp" alt="">`;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /** Tiny formatter for lesson text: paragraphs, **bold**, `code`. */
@@ -98,7 +99,7 @@ function continueCard(embed = false) {
       ${bar(lvl.pct)}
       <small>${lvl.into} / ${lvl.span} XP · ${lvl.toNext} XP to Level ${lvl.level + 1}</small>
       <div class="daily">
-        <div class="daily-row"><span>🎯 Daily goal</span><b>${day.xp} / ${day.goal} XP</b></div>
+        <div class="daily-row"><span>${ico('i-target')} Daily goal</span><b>${day.xp} / ${day.goal} XP</b></div>
         ${bar(day.pct, 'var(--green)')}
       </div>
     </div>`;
@@ -126,7 +127,7 @@ function continueCard(embed = false) {
         <div class="continue-body">
           <small>${course ? 'Course complete — try this next' : 'Recommended for you'}</small>
           <h2>${esc(featured.title)}</h2>
-          <p>${esc(featured.description)}</p>
+          <p>${esc(featured.tagline)}</p>
           <small class="meta">${s.levels} levels · ${s.lessons} lessons · ${s.xp} XP</small>
           <div class="cta-row"><a class="btn btn-primary" href="#/course/${featured.id}">Start learning</a>${allLink}</div>
         </div>
@@ -225,7 +226,7 @@ function renderCourse(courseId) {
   const levelsHtml = p.levels.map((lv) => `
     <section class="level level-${lv.status}">
       <header class="level-head">
-        <span class="level-num">${lv.status === 'done' ? '✓' : lv.status === 'locked' ? '🔒' : lv.index + 1}</span>
+        <span class="level-num">${lv.status === 'done' ? '✓' : lv.status === 'locked' ? ico('i-lock') : lv.index + 1}</span>
         <div>
           <small>Level ${lv.index + 1}${lv.status === 'done' ? ' · Complete' : lv.status === 'locked' ? ' · Locked' : ''}</small>
           <h2>${esc(lv.level.title)}</h2>
@@ -239,7 +240,7 @@ function renderCourse(courseId) {
         ${lv.lessons.map(({ lesson, status }) => {
           const off = OFFSETS[n++ % OFFSETS.length];
           const label = `${esc(lesson.title)} — ${status === 'done' ? 'completed' : status === 'current' ? 'up next' : 'locked'}`;
-          const inner = status === 'done' ? '✓' : status === 'current' ? '▶' : '🔒';
+          const inner = status === 'done' ? '✓' : status === 'current' ? '▶' : ico('i-lock');
           const node = status === 'locked'
             ? `<span class="node node-locked" aria-label="${label}">${inner}</span>`
             : `<a class="node node-${status}" href="#/lesson/${course.id}/${lesson.id}" aria-label="${label}">${inner}</a>`;
@@ -270,7 +271,7 @@ function renderCourse(courseId) {
           </div>
           <div class="course-progress">
             ${bar(p.pct, course.color)}
-            <small>${p.complete ? 'Course complete 🎉' : `Level ${p.currentLevel} of ${p.levelCount} · ${p.done}/${p.total} lessons`}</small>
+            <small>${p.complete ? 'Course complete' : `Level ${p.currentLevel} of ${p.levelCount} · ${p.done}/${p.total} lessons`}</small>
           </div>
           ${cta}
           ${course.custom ? '<button class="course-delete" id="delete-course" type="button">Delete course</button>' : ''}
@@ -449,18 +450,18 @@ function showResults(course, lesson, r) {
   const st = progress.streak();
   const next = r.nextLesson;
   const headline = r.courseCompleted ? 'Course complete!' : r.levelCompleted ? `Level ${r.levelCompleted.index + 1} complete!` : r.perfect ? 'Perfect lesson!' : 'Lesson complete!';
-  const emoji = r.courseCompleted ? '🏆' : r.levelCompleted ? '🎉' : r.perfect ? '🌟' : '✅';
+  const emoji = ico('i-trophy');
 
   app.innerHTML = `
     <div class="lesson results" style="--c:${course.color}">
       <div class="confetti" aria-hidden="true">${Array.from({ length: 28 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${(i % 7) * 0.12}s;--h:${(i * 47) % 360}"></i>`).join('')}</div>
       <div class="results-card">
-        <div class="results-emoji">${lemma.S.profile ? `<img src="${lemma.pic('cheer')}" alt="${esc(lemma.T().name)} cheering">` : emoji}</div>
+        <div class="results-emoji">${solva.S.profile ? `<img src="${solva.pic('cheer')}" alt="${esc(solva.T().name)} cheering">` : emoji}</div>
         <h1>${headline}</h1>
         <p>${esc(lesson.title)}${r.firstTime ? '' : ' · practice round'}</p>
         <div class="result-stats">
           <div><b>+${r.xpGained}</b><small>XP earned${r.bonus ? ` (incl. +${r.bonus} perfect)` : ''}</small></div>
-          <div><b>🔥 ${st.count}</b><small>day streak</small></div>
+          <div><b>${ico('i-flame')} ${st.count}</b><small>day streak</small></div>
           <div><b>${lvl.level}</b><small>${esc(lvl.title)}</small></div>
         </div>
         ${r.leveledUp ? `<div class="levelup">⬆ Level up! You reached <b>Level ${lvl.level} — ${esc(lvl.title)}</b></div>` : ''}
@@ -471,7 +472,7 @@ function showResults(course, lesson, r) {
         ${r.levelCompleted ? `
         <a class="explain-cta" href="#/explain/${course.id}/${r.levelCompleted.index}">
           <span>🎙</span>
-          <div><b>Explain it back to ${esc(lemma.T().name)}</b><small>Say what you learned out loud and get feedback · +${progress.EXPLAIN_XP} XP</small></div>
+          <div><b>Explain it back to ${esc(solva.T().name)}</b><small>Say what you learned out loud and get feedback · +${progress.EXPLAIN_XP} XP</small></div>
         </a>` : ''}
         <div class="result-actions">
           ${next ? `<a class="btn btn-primary" id="next" href="#/lesson/${course.id}/${next.id}">Next lesson</a>` : `<a class="btn btn-primary" id="next" href="#/courses">Find a new course</a>`}
@@ -479,7 +480,7 @@ function showResults(course, lesson, r) {
         </div>
       </div>
     </div>`;
-  if (r.leveledUp || r.levelCompleted) lemma.confetti();
+  if (r.leveledUp || r.levelCompleted) solva.confetti();
   app.querySelector('#next').focus();
 }
 
@@ -507,9 +508,9 @@ function renderProfile() {
           <small>${lvl.into} / ${lvl.span} XP · ${lvl.toNext} XP to Level ${lvl.level + 1}</small>
         </div>
         <div class="profile-stats">
-          <div><b>⚡ ${lvl.xp}</b><small>total XP</small></div>
-          <div><b>🔥 ${st.count}</b><small>day streak</small></div>
-          <div><b>🎯 ${day.xp}/${day.goal}</b><small>today</small></div>
+          <div><b>${ico('i-bolt')} ${lvl.xp}</b><small>total XP</small></div>
+          <div><b>${ico('i-flame')} ${st.count}</b><small>day streak</small></div>
+          <div><b>${ico('i-target')} ${day.xp}/${day.goal}</b><small>today</small></div>
         </div>
       </section>
       <div class="profile-cols">
@@ -544,7 +545,7 @@ function renderNotFound() {
   app.innerHTML = '<div class="page"><p class="empty">We couldn’t find that page. <a href="#/courses">Back to courses →</a></p></div>';
 }
 
-// ---- Lemma home: "continue learning" + level card --------------------------------
+// ---- Solva home: "continue learning" + level card --------------------------------
 
 function homeCard(slot) {
   if (!slot) return;
@@ -554,7 +555,7 @@ function homeCard(slot) {
 // ---- router -----------------------------------------------------------------
 // Our screens live under #/courses, #/course/:id, #/lesson/:course/:lesson, #/levels, #/create
 // and #/explain/:course/:levelIndex.
-// Any other hash hands the page back to Lemma.
+// Any other hash hands the page back to Solva.
 
 const VIEWS = ['courses', 'course', 'lesson', 'levels', 'create', 'explain'];
 let active = false;
@@ -563,7 +564,7 @@ function route() {
   player = null;
   const [, view, a, b] = location.hash.replace(/^#/, '').split('/');
   if (!VIEWS.includes(view)) {
-    if (active) { active = false; lemma.S.profile ? lemma.home() : lemma.landing(); window.scrollTo(0, 0); }
+    if (active) { active = false; solva.S.profile ? solva.home() : solva.landing(); window.scrollTo(0, 0); }
     return;
   }
   active = true;
@@ -592,7 +593,7 @@ document.addEventListener('keydown', (e) => {
 window.addEventListener('hashchange', route);
 progress.subscribe(renderTopbar);
 
-// Public API for the rest of Lemma.
+// Public API for the rest of Solva.
 window.Courses = { homeCard, progress, courses: COURSES, getCourse };
 homeCard(document.querySelector('#courses-slot'));
 route();

@@ -4,7 +4,7 @@ export default {
   category: 'math',
   tagline: 'Train your brain to spot patterns and solve puzzles',
   description: 'Build the core habits of a mathematician: finding rules, reasoning step by step, and counting cleverly. No formulas to memorize, just puzzles to crack.',
-  icon: '🧩',
+  icon: '<img class="ico" src="/img/c-mathematical-thinking.webp" alt="">',
   color: '#f59e0b',
   difficulty: 'Beginner',
   isNew: false,

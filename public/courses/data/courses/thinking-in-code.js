@@ -4,7 +4,7 @@ export default {
   category: 'cs',
   tagline: 'Learn to think like a programmer, one puzzle at a time',
   description: 'Build real programming intuition by tracing tiny programs in your head. No setup, no jargon, just variables, decisions, loops and functions.',
-  icon: '💻',
+  icon: '<img class="ico" src="/img/c-thinking-in-code.webp" alt="">',
   color: '#3b82f6',
   difficulty: 'Beginner',
   isNew: false,

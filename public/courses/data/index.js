@@ -21,7 +21,7 @@ export const COURSES = [
 
 // Courses the learner generated with AI (see ../generate.js). They live in localStorage and are
 // appended to COURSES at load, so the rest of the app treats them like any built-in course.
-const CUSTOM_KEY = 'lemma.courses.custom';
+const CUSTOM_KEY = 'solva.courses.custom';
 
 function readCustom() {
   try {
@@ -66,22 +66,22 @@ export function removeCourse(id) {
 
 export const CATEGORIES = [
   { id: 'mine', label: 'My courses', icon: '✨', blurb: 'Made for you by AI' },
-  { id: 'ai', label: 'AI', icon: '🧠', blurb: 'Understand and use modern AI' },
-  { id: 'math', label: 'Math', icon: '🧩', blurb: 'Build real number sense' },
-  { id: 'cs', label: 'Computer Science', icon: '💻', blurb: 'Think like a programmer' },
-  { id: 'data', label: 'Data', icon: '📊', blurb: 'Make sense of numbers' },
-  { id: 'science', label: 'Science', icon: '🔬', blurb: 'See how the world works' },
+  { id: 'ai', label: 'AI', icon: '<img class="ico" src="/img/c-how-ai-works.webp" alt="">', blurb: 'Understand and use modern AI' },
+  { id: 'math', label: 'Math', icon: '<img class="ico" src="/img/c-mathematical-thinking.webp" alt="">', blurb: 'Build real number sense' },
+  { id: 'cs', label: 'Computer Science', icon: '<img class="ico" src="/img/c-thinking-in-code.webp" alt="">', blurb: 'Think like a programmer' },
+  { id: 'data', label: 'Data', icon: '<img class="ico" src="/img/c-data-analysis.webp" alt="">', blurb: 'Make sense of numbers' },
+  { id: 'science', label: 'Science', icon: '<img class="ico" src="/img/c-scientific-thinking.webp" alt="">', blurb: 'See how the world works' },
 ];
 
 // Guided sequences of courses, shown as "Learning paths".
 export const PATHS = [
-  { id: 'ai-foundations', title: 'AI Foundations', icon: '🤖', color: '#7c5cff',
+  { id: 'ai-foundations', title: 'AI Foundations', icon: '<img class="ico" src="/img/c-prompting-and-agents.webp" alt="">', color: '#7c5cff',
     blurb: 'From next-word prediction to building with agents.',
     courses: ['how-ai-works', 'prompting-and-agents', 'thinking-in-code'] },
-  { id: 'math-core', title: 'Math Core', icon: '📐', color: '#f59e0b',
+  { id: 'math-core', title: 'Math Core', icon: '<img class="ico" src="/img/c-probability-basics.webp" alt="">', color: '#f59e0b',
     blurb: 'Patterns, logic and chance — the tools behind everything else.',
     courses: ['mathematical-thinking', 'probability-basics', 'data-analysis'] },
-  { id: 'cs-core', title: 'Programming & CS', icon: '⌨️', color: '#3b82f6',
+  { id: 'cs-core', title: 'Programming & CS', icon: '<img class="ico" src="/img/c-algorithms-basics.webp" alt="">', color: '#3b82f6',
     blurb: 'Go from first variables to efficient algorithms.',
     courses: ['thinking-in-code', 'algorithms-basics'] },
 ];

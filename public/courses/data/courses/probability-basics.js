@@ -4,7 +4,7 @@ export default {
   category: 'math',
   tagline: 'Make sense of chance, dice, and risky bets',
   description: 'Learn to measure uncertainty with coins, dice, and games. You will go from counting outcomes to deciding whether a bet is worth taking.',
-  icon: '🎲',
+  icon: '<img class="ico" src="/img/c-probability-basics.webp" alt="">',
   color: '#ef4444',
   difficulty: 'Beginner',
   isNew: false,
