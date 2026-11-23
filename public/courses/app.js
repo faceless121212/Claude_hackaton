@@ -1,5 +1,7 @@
-import { COURSES, CATEGORIES, PATHS, FEATURED_COURSE_ID, getCourse, findLesson, courseStats } from './data/index.js';
+import { COURSES, CATEGORIES, PATHS, FEATURED_COURSE_ID, getCourse, findLesson, courseStats, removeCourse } from './data/index.js';
 import * as progress from './progress.js';
+import { renderCreate } from './generate.js';
+import { renderExplain } from './explain.js';
 
 // Courses + levels for Lemma. Lemma's own screens render straight into #app; ours render into a
 // shadow root inside it, so the two stylesheets can never collide. `window.Lemma` is the bridge
@@ -140,6 +142,7 @@ function catalogHtml() {
   const groups = CATEGORIES
     .map((cat) => ({ cat, courses: COURSES.filter((c) => c.category === cat.id && matches(c)) }))
     .filter((g) => g.courses.length);
+  if (!groups.length && ui.category === 'mine' && !q) return '<p class="empty">You have not created a course yet. <a href="#/create">Create one with AI →</a></p>';
   if (!groups.length) return `<p class="empty">No courses match “${esc(ui.query)}”. Try a different search.</p>`;
   return groups.map(({ cat, courses }) => `
     <section class="cat-section">
@@ -180,6 +183,11 @@ function renderHome() {
       ${continueCard()}
       <section class="chooser">
         <h1>What do you want to learn?</h1>
+        <a class="create-cta" href="#/create">
+          <span class="create-cta-icon" aria-hidden="true">✨</span>
+          <span class="create-cta-text"><b>Create your own course</b><small>Type any topic or paste your notes — AI builds the lessons for you</small></span>
+          <span class="btn btn-primary btn-small">Create with AI</span>
+        </a>
         <div class="chooser-row">
           <div class="chips" role="tablist" aria-label="Course categories">
             <button class="chip ${ui.category === 'all' ? 'active' : ''}" data-cat="all">All</button>
@@ -223,7 +231,9 @@ function renderCourse(courseId) {
           <h2>${esc(lv.level.title)}</h2>
           <p>${esc(lv.level.summary)}</p>
         </div>
-        <span class="level-count">${lv.done}/${lv.total}</span>
+        ${lv.status === 'done'
+          ? `<a class="level-explain" href="#/explain/${course.id}/${lv.index}" title="Explain this level out loud and get feedback">${progress.explained(course.id, lv.level.id)?.passed ? '🎙 Explained ✓' : '🎙 Explain it back'}</a>`
+          : `<span class="level-count">${lv.done}/${lv.total}</span>`}
       </header>
       <ol class="nodes">
         ${lv.lessons.map(({ lesson, status }) => {
@@ -263,10 +273,16 @@ function renderCourse(courseId) {
             <small>${p.complete ? 'Course complete 🎉' : `Level ${p.currentLevel} of ${p.levelCount} · ${p.done}/${p.total} lessons`}</small>
           </div>
           ${cta}
+          ${course.custom ? '<button class="course-delete" id="delete-course" type="button">Delete course</button>' : ''}
         </div>
       </aside>
       <div class="levels">${levelsHtml}</div>
     </div>`;
+  app.querySelector('#delete-course')?.addEventListener('click', () => {
+    if (!confirm(`Delete “${course.title}”? This cannot be undone.`)) return;
+    removeCourse(course.id);
+    location.hash = '#/courses';
+  });
   app.querySelector('.node-current')?.scrollIntoView({ block: 'center' });
 }
 
@@ -452,6 +468,11 @@ function showResults(course, lesson, r) {
           ${bar(lvl.pct)}
           <small>${lvl.toNext} XP to Level ${lvl.level + 1}</small>
         </div>
+        ${r.levelCompleted ? `
+        <a class="explain-cta" href="#/explain/${course.id}/${r.levelCompleted.index}">
+          <span>🎙</span>
+          <div><b>Explain it back to ${esc(lemma.T().name)}</b><small>Say what you learned out loud and get feedback · +${progress.EXPLAIN_XP} XP</small></div>
+        </a>` : ''}
         <div class="result-actions">
           ${next ? `<a class="btn btn-primary" id="next" href="#/lesson/${course.id}/${next.id}">Next lesson</a>` : `<a class="btn btn-primary" id="next" href="#/courses">Find a new course</a>`}
           <a class="btn btn-ghost" href="#/course/${course.id}">Back to course</a>
@@ -531,10 +552,11 @@ function homeCard(slot) {
 }
 
 // ---- router -----------------------------------------------------------------
-// Our screens live under #/courses, #/course/:id, #/lesson/:course/:lesson and #/levels.
+// Our screens live under #/courses, #/course/:id, #/lesson/:course/:lesson, #/levels, #/create
+// and #/explain/:course/:levelIndex.
 // Any other hash hands the page back to Lemma.
 
-const VIEWS = ['courses', 'course', 'lesson', 'levels'];
+const VIEWS = ['courses', 'course', 'lesson', 'levels', 'create', 'explain'];
 let active = false;
 
 function route() {
@@ -545,10 +567,12 @@ function route() {
     return;
   }
   active = true;
-  frame(view === 'lesson');
+  frame(view === 'lesson' || view === 'explain');
   if (view === 'course') renderCourse(a);
   else if (view === 'lesson') renderLesson(a, b);
   else if (view === 'levels') renderProfile();
+  else if (view === 'create') renderCreate(app);
+  else if (view === 'explain') renderExplain(app, getCourse(a), Number(b));
   else renderHome();
   renderTopbar();
   if (view !== 'course') window.scrollTo(0, 0);

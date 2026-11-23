@@ -67,8 +67,8 @@ async function post(body) {
 async function ask(system, messages, max_tokens = 1500) {
   return (await (await post({ system, messages, max_tokens })).json()).text;
 }
-async function stream(system, messages, onText) {
-  const r = await post({ system, messages, stream: true, max_tokens: 1500 });
+async function stream(system, messages, onText, max_tokens = 1500) {
+  const r = await post({ system, messages, stream: true, max_tokens });
   const rd = r.body.getReader(), dec = new TextDecoder();
   let buf = '', full = '';
   for (;;) {
@@ -141,20 +141,7 @@ function memCard() {
 }
 window.forgetAll = () => { if (confirm('Erase everything your tutor remembers about you?')) { S.memory = { notes: [], topics: {} }; save(); home(); } };
 
-/* ---------- speech ---------- */
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-function say(text, onend) {
-  if (!window.speechSynthesis) return void (onend && onend());
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text.replace(/\$\$?[\s\S]+?\$\$?/g, ' ').replace(/[*`#_]/g, ''));
-  const vs = speechSynthesis.getVoices();
-  u.voice = vs.find(v => /Google US English|Samantha|Aria|Jenny/.test(v.name)) || vs.find(v => v.lang === 'en-US') || null;
-  u.rate = 1.04; u.pitch = 1.1;
-  let done = false; const fin = () => { if (!done) { done = true; onend && onend(); } };
-  u.onend = fin; u.onerror = fin;
-  speechSynthesis.speak(u);
-}
-window.speechSynthesis?.getVoices();
+/* ---------- speech: see public/voice.js (window.Voice) ---------- */
 
 /* ---------- shared bits ---------- */
 function nav() {
@@ -280,7 +267,7 @@ function session(mode, ctx) {
           <button type="button" class="icon" id="mic" title="Speak">🎤</button><input type="file" id="file" accept="image/*" hidden></div>
           <button class="send" aria-label="Send">↑</button></form></main></div>
     <div class="call" id="call" hidden><button class="x" id="call-x" aria-label="Leave voice mode">✕</button>
-      <div class="call-av"><img src="${pic(mode === 'comeback' ? 'care' : '')}" alt="${t.name}"></div>
+      <div class="call-av">${Voice.mascot(p.tutor)}</div>
       <div class="call-cap" id="cap"></div><div class="call-you" id="you"></div>
       <button class="mic-big" id="micb" aria-label="Talk">🎙</button><div class="call-st" id="cst">Tap the mic and talk</div></div></div>`;
   const box = $('#msgs'), input = $('#in'), stage = $('.session'), st = $('#st');
@@ -297,32 +284,51 @@ function session(mode, ctx) {
     busy = true; setTalking(true);
     const el = bubble('a', '<span class="dots"><i></i><i></i><i></i></span>');
     try {
-      const full = await stream(persona(mode, call), msgs, txt => { el.innerHTML = rich(txt); scroll(); if (call) $('#cap').innerHTML = rich(txt); });
+      // In voice mode the tutor starts speaking the first sentence while the rest is still being written.
+      const sp = call ? Voice.speaker({ tutor: p.tutor, onLevel: mouth, onStart: speaking }) : null;
+      const full = await stream(persona(mode, call), msgs, txt => { el.innerHTML = rich(txt); scroll(); if (call) $('#cap').innerHTML = rich(txt); sp?.push(txt); });
       msgs.push({ role: 'assistant', content: full });
-      if (call) { callState('speaking'); say(full, () => call && listen()); }
+      sp?.end(full).then(afterSpeech);
     } catch (e) { el.classList.add('err'); el.textContent = e.message + ' Try again in a moment.'; msgs.pop(); }
     busy = false; setTalking(false); chips(); if (!call) input.focus();
   }
-  /* voice mode: listen -> think -> speak -> listen */
-  let call = false, rec = null;
+  /* voice mode: listen -> think -> speak -> listen. Talking over the tutor (or tapping) interrupts it. */
+  let call = false, stopBarge = () => {};
+  const mouth = Voice.animator($('.call-av .mascot'));
   const callState = k => { const c = $('#call'); if (!c) return; c.dataset.s = k;
-    $('#cst').textContent = { idle: 'Tap the mic and talk', listening: 'Listening…', thinking: `${t.name} is thinking…`, speaking: 'Tap to interrupt' }[k]; };
-  function listen() {
+    $('#cst').textContent = { idle: 'Tap the mic and talk', listening: 'Listening… tap when you are done', thinking: `${t.name} is thinking…`, speaking: 'Start talking, or tap, to interrupt' }[k]; };
+  const speaking = () => { callState('speaking'); stopBarge(); stopBarge = Voice.bargeIn(() => { Voice.stop(); listen(); }); };
+  const afterSpeech = () => { stopBarge(); if (call && !busy && $('#call')?.dataset.s !== 'listening') listen(); };
+  async function listen() {
     if (!call || busy) return;
-    if (!SR) { callState('idle'); $('#cst').textContent = 'Voice input needs Chrome or Edge. You can still type.'; return; }
-    try { rec && rec.abort(); } catch {}
-    rec = new SR(); rec.lang = 'en-US'; rec.interimResults = true; let final = '';
-    rec.onresult = ev => { let txt = ''; for (const r of ev.results) { txt += r[0].transcript; if (r.isFinal) final = txt; } $('#you').textContent = txt; };
-    rec.onend = () => { if (!call) return; if (final.trim()) { callState('thinking'); send(final); } else callState('idle'); };
-    rec.onerror = () => {};
-    try { rec.start(); callState('listening'); $('#you').textContent = ''; } catch { callState('idle'); }
+    stopBarge(); callState('listening'); $('#you').textContent = '';
+    try {
+      const text = await Voice.listen({
+        onLevel: v => $('#call')?.style.setProperty('--mic', v),
+        onInterim: txt => { const y = $('#you'); if (y) y.textContent = txt; },
+        onState: k => { if (k === 'transcribing') callState('thinking'); },
+      });
+      if (!call || !$('#call')) return;
+      if (text) { $('#you').textContent = text; callState('thinking'); send(text); } else callState('idle');
+    } catch (e) {
+      if (!$('#call')) return;
+      callState('idle');
+      $('#cst').textContent = e.message === 'mic-denied' ? 'The microphone is blocked. Allow it in your browser, or type instead.'
+        : e.message === 'unsupported' ? 'Voice input needs Chrome or Edge here. You can still type.' : 'I did not catch that. Tap the mic to try again.';
+    }
   }
   function setCall(on) {
-    call = on; $('#call').hidden = !on; window.speechSynthesis?.cancel(); try { rec && rec.abort(); } catch {}
-    if (on) { const last = msgs.filter(m => m.role === 'assistant').pop(); $('#cap').innerHTML = last ? rich(last.content) : ''; listen(); }
+    call = on; $('#call').hidden = !on; Voice.stop(); Voice.cancelListening(); stopBarge();
+    if (!on) return;
+    Voice.unlock();
+    const last = msgs.filter(m => m.role === 'assistant').pop();
+    $('#cap').innerHTML = last ? rich(last.content) : '';
+    // The tutor says its last message aloud, then it is your turn.
+    if (last) Voice.speak(last.content, { tutor: p.tutor, onLevel: mouth, onStart: speaking }).then(afterSpeech); else listen();
   }
   $('#call-x').onclick = () => setCall(false);
-  $('#micb').onclick = () => { const s = $('#call').dataset.s; if (s === 'speaking') { speechSynthesis.cancel(); listen(); } else if (s === 'listening') rec && rec.stop(); else if (s !== 'thinking') listen(); };
+  $('#micb').onclick = () => { const k = $('#call').dataset.s; Voice.unlock();
+    if (k === 'speaking') { Voice.stop(); busy ? callState('thinking') : listen(); } else if (k === 'listening') Voice.finishListening(); else if (k !== 'thinking') listen(); };
   function send(text) {
     text = (text || '').trim();
     if (busy || (!text && !image)) return;
@@ -347,11 +353,13 @@ function session(mode, ctx) {
     };
     img.src = URL.createObjectURL(f); e.target.value = '';
   };
-  if (!SR) $('#mic').style.display = 'none';
-  else $('#mic').onclick = e => {
-    const b = e.currentTarget, r = new SR(); r.lang = 'en-US'; r.interimResults = false;
-    b.classList.add('rec'); r.onresult = ev => { input.value = (input.value + ' ' + ev.results[0][0].transcript).trim(); input.oninput(); };
-    r.onend = r.onerror = () => b.classList.remove('rec'); r.start();
+  Voice.ready.then(() => { if (!Voice.canListen && $('#mic')) $('#mic').style.display = 'none'; });
+  $('#mic').onclick = async e => {
+    const b = e.currentTarget;
+    if (b.classList.contains('rec')) return Voice.finishListening();
+    Voice.unlock(); b.classList.add('rec');
+    try { const said = await Voice.listen({}); if (said && $('#in')) { input.value = (input.value + ' ' + said).trim(); input.oninput(); } } catch {}
+    b.classList.remove('rec');
   };
 
   if (mode === 'why') { msgs.push({ role: 'user', content: ctx }); chips(); reply(); }
@@ -580,7 +588,7 @@ function landing() {
 }
 
 /* ---------- bridge for the courses + levels module (public/courses/) ---------- */
-window.Lemma = { S, save, touchStreak, nav, home, landing, T, pic, confetti };
+window.Lemma = { S, save, touchStreak, nav, home, landing, T, pic, confetti, ask, stream };
 
 /* ---------- boot ---------- */
 S.profile ? home() : landing();

@@ -6,6 +6,8 @@ const KEY = 'learnapp.progress.v1';
 export const DAILY_GOAL = 30;
 export const PERFECT_BONUS = 5;
 export const REPLAY_XP = 5;
+export const EXPLAIN_XP = 15;       // first time a level is explained back well enough
+export const EXPLAIN_TRY_XP = 3;    // any other attempt
 
 export const LEVEL_TITLES = [
   'Novice', 'Explorer', 'Thinker', 'Problem Solver', 'Scholar',
@@ -21,7 +23,7 @@ const lemma = () => globalThis.Lemma;
 export function totalXp() { return lemma() ? lemma().S.xp : state.xp; }
 
 function blank() {
-  return { xp: 0, completed: {}, streak: { count: 0, lastDay: null }, daily: { day: null, xp: 0 }, activeCourse: null };
+  return { xp: 0, completed: {}, explained: {}, streak: { count: 0, lastDay: null }, daily: { day: null, xp: 0 }, activeCourse: null };
 }
 
 function load() {
@@ -185,4 +187,23 @@ export function completeLesson(course, lesson, { mistakes = 0 } = {}) {
     courseCompleted: !before.complete && after.complete,
     nextLesson: after.nextLesson,
   };
+}
+
+// ---- Explain it back ------------------------------------------------------
+
+/** Best "explain it back" result for a level: { score, at } or undefined. */
+export function explained(courseId, levelId) {
+  return state.explained[courseId]?.[levelId];
+}
+
+/** Record an explain-it-back attempt. The full reward is given once per level, on the first pass. */
+export function recordExplain(course, level, score, passed) {
+  const before = explained(course.id, level.id);
+  const first = passed && !before?.passed;
+  if (!before || score > before.score || first) {
+    state.explained[course.id] = { ...state.explained[course.id], [level.id]: { score, passed: passed || Boolean(before?.passed), at: Date.now() } };
+  }
+  const xp = first ? EXPLAIN_XP : EXPLAIN_TRY_XP;
+  const { leveledUp, level: userLevel } = addXp(xp);
+  return { xp, first, leveledUp, level: userLevel };
 }

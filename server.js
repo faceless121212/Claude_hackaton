@@ -45,7 +45,7 @@ async function chat(req, res) {
   const messages = (body.messages || []).slice();
   // Models expect the conversation to open with the user.
   if (messages[0]?.role === 'assistant') messages.unshift({ role: 'user', content: '(The student opened a session.)' });
-  const max_tokens = Math.min(body.max_tokens || 1500, 4000), stream = !!body.stream, system = String(body.system || '');
+  const max_tokens = Math.min(body.max_tokens || 1500, 8000), stream = !!body.stream, system = String(body.system || '');
   const fail = (code, error, detail) => res.writeHead(code, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error, detail }));
   if (!KEY && !ANTHROPIC_KEY) return void fail(500, 'No API key is set. Add FAL_KEY (or ANTHROPIC_API_KEY) to the .env file and restart.');
 
@@ -93,8 +93,41 @@ async function chat(req, res) {
   res.end();
 }
 
+// Voice: natural speech and transcription through fal (ElevenLabs). Needs FAL_KEY; without it the
+// app falls back to the browser's built-in voice and speech recognition.
+const VOICES = { nova: 'Jessica', max: 'Charlie', ada: 'Alice' };
+const json = (res, code, obj) => res.writeHead(code, { 'Content-Type': 'application/json' }).end(JSON.stringify(obj));
+async function fal(model, input) {
+  const up = await fetch('https://fal.run/' + model, {
+    method: 'POST', headers: { Authorization: 'Key ' + KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+  });
+  if (!up.ok) throw new Error(`${model} ${up.status}: ${(await up.text()).slice(0, 300)}`);
+  return up.json();
+}
+async function tts(req, res) {
+  if (!KEY) return void json(res, 503, { error: 'Voice needs FAL_KEY.' });
+  const { text, tutor } = JSON.parse(await readBody(req));
+  if (!text || typeof text !== 'string') return void json(res, 400, { error: 'No text.' });
+  const out = await fal('fal-ai/elevenlabs/tts/turbo-v2.5', { text: text.slice(0, 1200), voice: VOICES[tutor] || VOICES.nova });
+  // Pass the audio through, so the browser only ever talks to this server.
+  const audio = await fetch(out.audio.url);
+  if (!audio.ok) throw new Error('audio download ' + audio.status);
+  res.writeHead(200, { 'Content-Type': out.audio.content_type || 'audio/mpeg', 'Cache-Control': 'no-store' }).end(Buffer.from(await audio.arrayBuffer()));
+}
+async function stt(req, res) {
+  if (!KEY) return void json(res, 503, { error: 'Voice needs FAL_KEY.' });
+  const { audio } = JSON.parse(await readBody(req));
+  if (!/^data:audio\//.test(audio || '')) return void json(res, 400, { error: 'No audio.' });
+  const out = await fal('fal-ai/elevenlabs/speech-to-text', { audio_url: audio });
+  json(res, 200, { text: (out.text || '').trim() });
+}
+
 http.createServer((req, res) => {
+  const api = fn => void fn(req, res).catch(e => { try { json(res, 502, { error: String(e.message || e) }); } catch {} });
   if (req.method === 'POST' && req.url === '/api/chat') return void chat(req, res).catch(e => { try { res.writeHead(500).end(String(e)); } catch {} });
+  if (req.method === 'POST' && req.url === '/api/tts') return api(tts);
+  if (req.method === 'POST' && req.url === '/api/stt') return api(stt);
+  if (req.url === '/api/voice') return void json(res, 200, { server: !!KEY });
   const urlPath = decodeURIComponent(req.url.split('?')[0]);
   const file = path.join(__dirname, 'public', path.normalize(urlPath === '/' ? '/index.html' : urlPath));
   if (!file.startsWith(path.join(__dirname, 'public'))) return void res.writeHead(403).end();
