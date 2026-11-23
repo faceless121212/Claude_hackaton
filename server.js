@@ -11,7 +11,7 @@ try {
 
 const PORT = process.env.PORT || 3000;
 const KEY = process.env.FAL_KEY || '';
-const MODEL = process.env.MODEL || 'anthropic/claude-sonnet-5.5';
+const MODEL = process.env.MODEL || 'anthropic/claude-fable-5.2';
 const UPSTREAM = 'https://fal.run/openrouter/router/openai/v1/chat/completions';
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
 
@@ -26,7 +26,10 @@ function readBody(req, limit = 12e6) {
 
 // Provider: Claude directly when ANTHROPIC_API_KEY is set, otherwise Claude through fal (OpenRouter).
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-fable-5-2';
+// These models can decline a request; with fallbacks on, the API re-runs a declined request on another model.
+const FALLBACKS = /^claude-(fable-5-[12]|opus-5|sonnet-5-5)/.test(ANTHROPIC_MODEL);
+const DECLINED = "I can't help with that one. Try asking it another way.";
 
 function toAnthropic(messages) {
   return messages.map(m => ({
@@ -54,8 +57,11 @@ async function chat(req, res) {
     up = ANTHROPIC_KEY
       ? await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
-          headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: ANTHROPIC_MODEL, system, messages: toAnthropic(messages), max_tokens, stream }),
+          headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json',
+            ...(FALLBACKS && { 'anthropic-beta': 'server-side-fallback-2026-07-01' }) },
+          // Low effort: these models think before every reply, and a short tutor message has to stay fast and inside max_tokens.
+          body: JSON.stringify({ model: ANTHROPIC_MODEL, system, messages: toAnthropic(messages), max_tokens, stream,
+            output_config: { effort: 'low' }, ...(FALLBACKS && { fallbacks: 'default' }) }),
         })
       : await fetch(UPSTREAM, {
           method: 'POST',
@@ -68,7 +74,8 @@ async function chat(req, res) {
 
   if (!stream) {
     const j = await up.json();
-    const text = ANTHROPIC_KEY ? (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('') : (j.choices?.[0]?.message?.content || '');
+    const text = !ANTHROPIC_KEY ? (j.choices?.[0]?.message?.content || '')
+      : j.stop_reason === 'refusal' ? DECLINED : (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
     return void res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ text }));
   }
   res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
@@ -84,8 +91,9 @@ async function chat(req, res) {
           if (!line.startsWith('data:')) continue;
           try {
             const ev = JSON.parse(line.slice(5));
-            if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta')
-              res.write('data: ' + JSON.stringify({ choices: [{ delta: { content: ev.delta.text } }] }) + '\n\n');
+            const text = ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta' ? ev.delta.text
+              : ev.type === 'message_delta' && ev.delta?.stop_reason === 'refusal' ? '\n\n' + DECLINED : '';
+            if (text) res.write('data: ' + JSON.stringify({ choices: [{ delta: { content: text } }] }) + '\n\n');
           } catch {}
         }
       }
