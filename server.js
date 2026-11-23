@@ -1,4 +1,4 @@
-// Lemma — zero-dependency server. Serves ./public and proxies chat to Claude via fal's OpenRouter endpoint.
+// Lemma — zero-dependency server. Serves ./public (the tutor at /, courses at /courses/) and proxies chat to Claude via fal's OpenRouter endpoint.
 const http = require('http'), fs = require('fs'), path = require('path');
 
 // Minimal .env loader (FAL_KEY=..., MODEL=..., PORT=...)
@@ -47,7 +47,7 @@ async function chat(req, res) {
   if (messages[0]?.role === 'assistant') messages.unshift({ role: 'user', content: '(The student opened a session.)' });
   const max_tokens = Math.min(body.max_tokens || 1500, 4000), stream = !!body.stream, system = String(body.system || '');
   const fail = (code, error, detail) => res.writeHead(code, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error, detail }));
-  if (!KEY && !ANTHROPIC_KEY) return void fail(500, 'No API key is set. Add FAL_KEY (or ANTHROPIC_API_KEY) to the .env file and restart.');
+  if (!KEY && !ANTHROPIC_KEY) return void fail(500, 'No API key is set. Add FAL_KEY or ANTHROPIC_API_KEY to .env and restart.');
 
   let up;
   try {
@@ -63,7 +63,8 @@ async function chat(req, res) {
           body: JSON.stringify({ model: MODEL, messages: [{ role: 'system', content: system }, ...messages], max_tokens, stream, reasoning: { effort: 'low' } }),
         });
   } catch (e) { return void fail(502, 'Cannot reach the model: ' + e.message); }
-  if (!up.ok) return void fail(502, `Model error ${up.status}`, (await up.text()).slice(0, 400));
+  if (!up.ok) return void fail(502, up.status === 401 || up.status === 403 ? 'The API key was rejected. Check the key in .env and restart.'
+    : `The model is not responding (error ${up.status}).`, (await up.text()).slice(0, 400));
 
   if (!stream) {
     const j = await up.json();
@@ -95,12 +96,21 @@ async function chat(req, res) {
 
 http.createServer((req, res) => {
   if (req.method === 'POST' && req.url === '/api/chat') return void chat(req, res).catch(e => { try { res.writeHead(500).end(String(e)); } catch {} });
-  const urlPath = decodeURIComponent(req.url.split('?')[0]);
-  const file = path.join(__dirname, 'public', path.normalize(urlPath === '/' ? '/index.html' : urlPath));
-  if (!file.startsWith(path.join(__dirname, 'public'))) return void res.writeHead(403).end();
-  fs.readFile(file, (err, data) => {
-    if (err) return void res.writeHead(404).end('Not found');
-    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' }).end(data);
+  let urlPath;
+  try { urlPath = decodeURIComponent(req.url.split('?')[0]); } catch { return void res.writeHead(400).end('Bad request'); }
+  const root = path.join(__dirname, 'public');
+  let file = path.join(root, path.normalize(urlPath));
+  if (file !== root && !file.startsWith(root + path.sep)) return void res.writeHead(403).end();
+  fs.stat(file, (err, st) => {
+    if (!err && st.isDirectory()) {
+      // Folders such as /courses/ serve their own index.html; add the slash first so relative links resolve.
+      if (!urlPath.endsWith('/')) return void res.writeHead(302, { Location: urlPath + '/' }).end();
+      file = path.join(file, 'index.html');
+    }
+    fs.readFile(file, (err2, data) => {
+      if (err2) return void res.writeHead(404).end('Not found');
+      res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' }).end(data);
+    });
   });
 }).on('error', e => {
   console.error(e.code === 'EADDRINUSE' ? `Port ${PORT} is already in use. Close the other program or run with PORT=3001.` : e.message);
