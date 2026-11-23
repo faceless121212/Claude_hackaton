@@ -230,13 +230,13 @@ function onboarding(step = 0, d = { ...OB }) {
 }
 
 /* ---------- home ---------- */
-const swapHtml = () => `<div class="swap" role="group" aria-label="Switch tutor">${Object.entries(TUTORS).map(([k, t]) =>
-  `<button type="button" data-t="${k}" class="${k === S.profile.tutor ? 'on' : ''}" title="Talk to ${t.name}" aria-pressed="${k === S.profile.tutor}"><img src="${t.img}" alt="${t.name}"></button>`).join('')}</div>`;
+const swapHtml = (cur = S.profile.tutor) => `<div class="swap" role="group" aria-label="Switch tutor">${Object.entries(TUTORS).map(([k, t]) =>
+  `<button type="button" data-t="${k}" class="${k === cur ? 'on' : ''}" title="Talk to ${t.name}" aria-pressed="${k === cur}"><img src="${t.img}" alt="${t.name}"></button>`).join('')}</div>`;
 function home() {
   touchStreak();
   const p = S.profile, t = T();
   const greet = S.plan ? [`Day ${Math.min(Object.keys(S.done).length + 1, S.plan.days.length)} of ${S.plan.days.length}, ${esc(p.name)}.`, esc(S.plan.pep)]
-    : S.memory.notes.length ? [`Welcome back, ${esc(p.name)}.`, esc(S.memory.notes[0])]
+    : S.memory.notes.length ? [`Welcome back, ${esc(p.name)}.`, '']
     : p.situation === 'failed' ? [`Rough exam, ${esc(p.name)}?`, 'Tell me what happened.']
     : p.situation === 'exam' ? [`Let's get you ready, ${esc(p.name)}.`, '']
     : [`What are we cracking, ${esc(p.name)}?`, ''];
@@ -246,6 +246,8 @@ function home() {
         <div><b>${esc(d.focus)}</b><span>${esc(d.task)}</span></div><div class="go-t">${d.minutes || 20} min</div></button>`).join('')
     : SUBJECTS[p.subject].map((s, i) => { const st = stat(s); return `<button class="node" data-topic="${esc(s)}"><div class="n">${i + 1}</div>
         <div><b>${esc(s)}</b><div class="bar" role="img" aria-label="${st ? st.pct + '% correct' : 'Not started'}"><i style="width:${st ? st.pct : 0}%"></i></div></div><div class="go-t">${st ? st.txt : 'Start'}</div></button>`; }).join('');
+  const weakest = Object.entries(S.memory.topics).filter(([k, v]) => CONTENT[k] && v.ok < v.n).sort((a, b) => a[1].ok / a[1].n - b[1].ok / b[1].n)[0]?.[0];
+  const dt = dailyTopic(), dDone = S.dailyDone === today();
   const acts = [['a-solve', 's-solve', 'Solve a problem', 'Type it or snap a photo'], ['a-prac', 's-practice', 'Quick practice', '5 questions'],
     ['a-come', 's-comeback', 'Bad exam?', 'Get a comeback plan'], ['a-mock', 's-mock', 'Mock exam', '6 minutes, no hints']];
   app.innerHTML = `<div class="wrap t-${p.tutor}">${nav()}
@@ -253,7 +255,10 @@ function home() {
       <div class="say"><h2>${greet[0]}</h2>${greet[1] ? `<p>${greet[1]}</p>` : ''}
         <form class="composer h-ask" id="h-form"><div class="box"><textarea id="h-in" rows="1" placeholder="Ask ${t.name}…" aria-label="Message ${t.name}"></textarea></div>
           <button class="send" aria-label="Send">${IC.send}</button></form>
-        ${S.plan ? `<div class="cta"><button class="btn go" id="h-next">Continue my plan</button></div>` : ''}</div></div>
+        ${S.plan ? `<div class="cta"><button class="btn go" id="h-next">Continue my plan</button></div>`
+          : weakest ? `<div class="cta"><button class="btn go" id="h-weak">Review ${esc(weakest)} ${IC.arrow}</button></div>` : ''}</div></div>
+    <section class="card daily"><div class="card-h">${art('i-target', 'pi')}<b>Today's problem</b><span class="tag">${esc(dt)}</span><div class="sp"></div>
+      <span class="pill xp" id="d-xp">${dDone ? `${IC.check} Done` : `${art('i-bolt', 'pi', 'XP')} <b>+5</b>`}</span></div><div id="daily"></div></section>
     <div id="courses-slot"></div>
     <div class="acts">${acts.map(a => `<button class="act" id="${a[0]}">${art(a[1])}<b>${a[2]}</b></button>`).join('')}</div>
     <div id="mem-slot">${memCard()}</div>
@@ -272,7 +277,14 @@ function home() {
   on('#a-prac', () => practice(SUBJECTS[p.subject][Math.floor(Math.random() * SUBJECTS[p.subject].length)]));
   on('#h-next', () => { const i = S.plan.days.findIndex((_, i) => !S.done[i]); const k = i < 0 ? 0 : i; practice(S.plan.days[k].focus, k); });
   on('#clear-plan', () => { S.plan = null; S.done = {}; save(); home(); });
-  $$('.node').forEach(n => n.onclick = () => n.dataset.day != null ? practice(S.plan.days[+n.dataset.day].focus, +n.dataset.day) : practice(n.dataset.topic));
+  on('#h-weak', () => topic(weakest));
+  checkCard($('#daily'), dt, ok => {
+    if (S.dailyDone === today()) return; // XP once a day
+    S.dailyDone = today(); S.xp += 5; track(dt, ok);
+    $('#d-xp').innerHTML = `${IC.check} Done`; $('.nav .pill.xp b').textContent = S.xp; if (ok) confetti();
+  });
+  $$('.node').forEach(n => n.onclick = () => n.dataset.day != null ? practice(S.plan.days[+n.dataset.day].focus, +n.dataset.day)
+    : CONTENT[n.dataset.topic] ? topic(n.dataset.topic) : practice(n.dataset.topic));
   $('.logo').onclick = landing;
   window.Courses?.homeCard($('#courses-slot'));
 }
@@ -429,7 +441,8 @@ function parseQ(text) {
 }
 function practice(topic, dayIdx = null) {
   const p = S.profile, t = T(), N = 5;
-  const results = []; const asked = []; let level = 2, next = null, earned = 0;
+  const results = []; const asked = []; const log = []; let level = 2, next = null, earned = 0;
+  const whyText = (q, pick, ok) => `I just answered this practice question.\n\nQuestion: ${q.Q}\nA) ${q.choices.A}\nB) ${q.choices.B}\nC) ${q.choices.C}\nD) ${q.choices.D}\n\nI chose ${pick}. The correct answer is ${q.ANSWER}. ${ok ? 'I got it right but I want to be sure I understand why.' : 'Help me see where my thinking went wrong.'}`;
   const gen = () => genQ(topic, level, asked);
 
   const shell = inner => { app.innerHTML = `<div class="prac t-${p.tutor}"><div class="p-top"><button class="x" id="close" aria-label="Close">${IC.x}</button>
@@ -450,7 +463,7 @@ function practice(topic, dayIdx = null) {
     $$('.choice').forEach(c => c.onclick = () => { pick = c.dataset.k; $$('.choice').forEach(x => x.classList.toggle('on', x === c)); $('#check').disabled = false; });
     $('#hintb').onclick = () => { $('#hint').innerHTML = `<div class="hint"><img src="${t.img}" alt=""><div>${rich(q.HINT || 'Write down what you know first.')}</div></div>`; };
     $('#check').onclick = () => {
-      const ok = pick === q.ANSWER; results.push(ok); track(topic, ok);
+      const ok = pick === q.ANSWER; results.push(ok); track(topic, ok); log.push({ q, pick, ok });
       if (ok) { S.xp += 10; earned += 10; save(); }
       level = Math.max(1, Math.min(3, level + (ok ? 1 : -1)));
       if (results.length < N) next = gen().catch(() => null).then(x => x || gen());
@@ -462,7 +475,7 @@ function practice(topic, dayIdx = null) {
       foot.innerHTML = `<div class="in"><img class="fb-m" src="${pic(ok ? 'cheer' : 'care')}" alt=""><div class="fb"><b>${ok ? 'Correct! +10 XP' : `It's ${q.ANSWER}.`}</b><p>${rich(q.WHY || '')}</p></div>
         <div class="bs"><button class="btn ghost" id="why">Ask ${t.name} why</button><button class="btn ${ok ? 'go' : ''} big" id="cont">${results.length < N ? 'Continue' : 'Finish'}</button></div></div>`;
       $('#cont').onclick = () => results.length < N ? load() : finish();
-      $('#why').onclick = () => session('why', `I just answered this practice question.\n\nQuestion: ${q.Q}\nA) ${q.choices.A}\nB) ${q.choices.B}\nC) ${q.choices.C}\nD) ${q.choices.D}\n\nI chose ${pick}. The correct answer is ${q.ANSWER}. ${ok ? 'I got it right but I want to be sure I understand why.' : 'Help me see where my thinking went wrong.'}`);
+      $('#why').onclick = () => askTutor(whyText(q, pick, ok));
     };
   }
   function finish() {
@@ -473,7 +486,11 @@ function practice(topic, dayIdx = null) {
     shell(`<div class="result"><img src="${pic(score >= 3 ? 'cheer' : 'care')}" alt=""><div class="score">${score}/${N}</div><h2>${esc(topic)}</h2>
       <p class="lead">${line}</p>
       <div class="stats"><div class="pill xp">${art('i-bolt', 'pi', 'XP')} <b>+${earned}</b></div><div class="pill fire">${art('i-flame', 'pi', 'Streak')} <b>${S.streak}</b></div>${dayIdx != null ? '<div class="pill">Plan day done</div>' : ''}</div>
-      <div class="stats" style="margin-top:10px"><button class="btn ghost" id="again">Again</button><button class="btn go big" id="homeb">Done</button></div></div>`);
+      <div class="stats" style="margin-top:10px"><button class="btn ghost" id="again">Again</button><button class="btn go big" id="homeb">Done</button></div></div>
+      <div class="path">${log.map((r, k) => `<div class="rv ${r.ok ? 'ok' : 'no'}"><div class="rv-h"><span class="n">${r.ok ? IC.check : IC.x}</span><b>${esc(r.q.TOPIC || topic)}</b>
+        <span class="muted">You: ${r.pick} · Answer: ${r.q.ANSWER}</span></div><div class="rv-q">${rich(r.q.Q)}</div>
+        ${r.ok ? '' : `<p class="rv-w">${rich(r.q.WHY || '')}</p><button class="btn ghost" data-why="${k}">Ask ${T().name} why</button>`}</div>`).join('')}</div>`);
+    $$('[data-why]').forEach(b => b.onclick = () => { const r = log[+b.dataset.why]; askTutor(whyText(r.q, r.pick, r.ok)); });
     if (score >= 3) confetti();
     $('#again').onclick = () => practice(topic, dayIdx); $('#homeb').onclick = home;
   }
@@ -567,11 +584,114 @@ function mock() {
     $('#close').onclick = home; $('#homeb').onclick = home;
     if ($('#fix')) $('#fix').onclick = () => practice(missed[0]);
     $$('[data-why]').forEach(b => b.onclick = () => { const q = qs[+b.dataset.why], k = +b.dataset.why;
-      session('why', `In a timed mock exam I got this question wrong.\n\nQuestion: ${q.Q}\nA) ${q.choices.A}\nB) ${q.choices.B}\nC) ${q.choices.C}\nD) ${q.choices.D}\n\nI chose ${picks[k] || 'nothing (ran out of time)'}. The correct answer is ${q.ANSWER}. Help me see where my thinking went wrong.`); });
+      askTutor(`In a timed mock exam I got this question wrong.\n\nQuestion: ${q.Q}\nA) ${q.choices.A}\nB) ${q.choices.B}\nC) ${q.choices.C}\nD) ${q.choices.D}\n\nI chose ${picks[k] || 'nothing (ran out of time)'}. The correct answer is ${q.ANSWER}. Help me see where my thinking went wrong.`); });
     stream(`You are ${t.name}, an AI study coach. Personality: ${t.style} Give ${p.name} a debrief of their timed mock exam in under 35 words: one honest sentence on the result, then the single most valuable thing to fix first and why, then one concrete next step. Plain text, no LaTeX, no lists. If time ran out or questions were blank, address pacing.`,
       [{ role: 'user', content: `Result ${score}/${qs.length}. Time used ${used}s of ${SECS}s.\n` + qs.map((q, k) => `${q.main}: ${oks[k] ? 'correct' : picks[k] ? 'wrong' : 'left blank'}`).join('\n') }],
       txt => { const el = $('#rev'); if (el) el.innerHTML = rich(txt); }).catch(() => { const el = $('#rev'); if (el) el.textContent = 'Review the questions below, starting with the ones you missed.'; });
   }
+}
+
+/* ---------- figures: a tiny function plotter for the study cards ---------- */
+function plot(spec, w = 320, h = 200) {
+  const [x0, x1] = spec.x, [y0, y1] = spec.y, pad = 8, span = y1 - y0;
+  const X = x => pad + (x - x0) / (x1 - x0) * (w - 2 * pad), Y = y => h - pad - (y - y0) / span * (h - 2 * pad);
+  const pts = (f, a, b) => Array.from({ length: 81 }, (_, i) => { const x = a + (b - a) * i / 80; return `${X(x).toFixed(1)} ${Y(Math.max(y0 - span, Math.min(y1 + span, f(x)))).toFixed(1)}`; });
+  const colors = ['var(--purple)', 'var(--coral)', 'var(--green-d)'];
+  const ax = Y(Math.max(y0, Math.min(y1, 0))), ay = X(Math.max(x0, Math.min(x1, 0)));
+  const grid = [1, 2, 3].map(i => `<path d="M${pad} ${(h * i / 4).toFixed(1)}H${w - pad}M${(w * i / 4).toFixed(1)} ${pad}V${h - pad}"/>`).join('');
+  const fill = spec.fill ? `<path fill="var(--purple-s)" stroke="none" d="M${X(spec.fill.from).toFixed(1)} ${ax}L${pts(spec.fill.f, spec.fill.from, spec.fill.to).join('L')}L${X(spec.fill.to).toFixed(1)} ${ax}Z"/>` : '';
+  return `<svg class="plot" viewBox="0 0 ${w} ${h}" role="img" aria-label="Graph"><g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke="var(--line)" stroke-width="1">${grid}</g>${fill}
+    <path stroke="var(--ink)" stroke-width="1.5" d="M${pad} ${ax}H${w - pad}M${ay} ${pad}V${h - pad}"/>
+    ${spec.curves.map((f, i) => `<path stroke="${colors[i % 3]}" stroke-width="3.5" d="M${pts(f, x0, x1).join('L')}"/>`).join('')}</g>
+    ${(spec.points || []).map(p => `<circle cx="${X(p[0]).toFixed(1)}" cy="${Y(p[1]).toFixed(1)}" r="5.5" fill="var(--ink)" stroke="#fff" stroke-width="2"/>`).join('')}</svg>`;
+}
+
+/* ---------- one curated question, answerable in place (study card, daily problem) ---------- */
+function checkCard(el, name, onDone) {
+  const c = CONTENT[name].check;
+  el.innerHTML = `<div class="q">${rich(c.q)}</div>
+    <div class="choices two">${c.c.map((x, i) => `<button class="choice" data-i="${i}"><span class="k">${'ABCD'[i]}</span><span>${rich(x)}</span></button>`).join('')}</div><div class="ck-fb"></div>`;
+  $$('.choice', el).forEach(b => b.onclick = () => {
+    const ok = +b.dataset.i === c.a;
+    $('.choices', el).classList.add('locked');
+    $$('.choice', el).forEach(x => x.classList.add(+x.dataset.i === c.a ? 'ok' : x === b ? 'no' : 'off'));
+    $('.ck-fb', el).innerHTML = `<div class="hint"><img src="${pic(ok ? 'cheer' : 'care')}" alt=""><div><b>${ok ? 'Correct.' : `It's ${'ABCD'[c.a]}.`}</b> ${rich(c.why)}
+      <button class="linkish" data-ask>Ask ${T().name} why</button></div></div>`;
+    $('[data-ask]', el).onclick = () => askTutor(`Question: ${c.q}\nChoices: ${c.c.join(' | ')}\nI chose ${c.c[+b.dataset.i]}. The correct answer is ${c.c[c.a]}. ${ok ? 'I got it right but I want to be sure I understand why.' : 'Help me see where my thinking went wrong.'}`);
+    onDone && onDone(ok);
+  });
+}
+const dailyTopic = () => { const ts = SUBJECTS[S.profile.subject].filter(t => CONTENT[t]); return ts[Math.floor(Date.now() / 864e5) % ts.length]; };
+const today = () => new Date().toISOString().slice(0, 10);
+
+/* ---------- study card: formulas, a figure, a worked example and a quick check, then practice ---------- */
+function topic(name) {
+  const p = S.profile, c = CONTENT[name], v = S.memory.topics[name], all = [...c.ex.steps, c.ex.a];
+  let shown = 0;
+  app.innerHTML = `<div class="prac study t-${p.tutor}"><div class="p-top"><button class="x" id="close" aria-label="Close">${IC.x}</button><h2>${esc(name)}</h2>
+      <div class="sp"></div>${v ? `<div class="pill"><b>${v.ok}/${v.n}</b> correct</div>` : ''}</div>
+    <div class="t-grid"><section class="card"><span class="tag">Key formulas</span><div class="keys">${c.key.map(k => `<div class="key">${rich(k)}</div>`).join('')}</div></section>
+      <section class="card fig">${c.plot ? plot(c.plot) : art(SUBJ_IMG[p.subject], 'fig-i', p.subject)}</section></div>
+    <section class="card"><span class="tag">Worked example</span><div class="q">${rich(c.ex.q)}</div><ol class="steps" id="steps"></ol>
+      <button class="btn ghost" id="step">Show step 1</button></section>
+    <section class="card"><span class="tag">Quick check</span><div id="ck"></div></section>
+    <div class="p-foot"><div class="in"><button class="btn ghost" id="t-ask">Ask ${T().name}</button><button class="btn go big" id="t-prac">Practice ${IC.arrow}</button></div></div></div>`;
+  window.scrollTo(0, 0);
+  $('#close').onclick = home;
+  $('#step').onclick = e => {
+    const last = shown === all.length - 1, li = document.createElement('li');
+    li.innerHTML = rich(all[shown]); if (last) li.className = 'ans'; $('#steps').appendChild(li); shown++;
+    if (last) e.currentTarget.remove(); else e.currentTarget.textContent = shown === all.length - 1 ? 'Show answer' : `Show step ${shown + 1}`;
+  };
+  checkCard($('#ck'), name);
+  $('#t-ask').onclick = () => askTutor(`I am studying ${name}. The worked example on my screen is: ${c.ex.q}. Help me understand this topic.`, 'solve');
+  $('#t-prac').onclick = () => practice(name);
+}
+
+/* ---------- ask panel: talk to any tutor from any screen without leaving it ---------- */
+function askTutor(ctx, mode = 'why') {
+  $('.drawer')?.remove();
+  const msgs = []; let busy = false, turns = 0, tid = S.profile?.tutor || 'nova';
+  const el = document.createElement('aside'); el.className = 'drawer t-' + tid; el.setAttribute('aria-label', 'Ask a tutor');
+  el.innerHTML = `<div class="dr-top"><img data-face src="${TUTORS[tid].img}" alt=""><b class="nm">${TUTORS[tid].name}</b><div class="sp"></div>${swapHtml(tid)}
+      <button class="x" aria-label="Close">${IC.x}</button></div>
+    <div class="msgs" aria-live="polite"></div><div class="quick"></div>
+    <form class="composer"><div class="box"><textarea rows="1" placeholder="Message ${TUTORS[tid].name}…" aria-label="Message the tutor"></textarea></div><button class="send" aria-label="Send">${IC.send}</button></form>`;
+  document.body.appendChild(el);
+  const box = $('.msgs', el), input = $('textarea', el), quick = $('.quick', el);
+  const scroll = () => box.scrollTop = box.scrollHeight;
+  const bubble = (role, html) => { const b = document.createElement('div'); b.className = role === 'note' ? 'note' : 'msg ' + role; b.innerHTML = html; box.appendChild(b); scroll(); return b; };
+  const chips = () => { quick.innerHTML = ['Give me a hint', 'Explain it differently', 'Show the full solution'].map(x => `<button type="button" class="chip">${x}</button>`).join('');
+    $$('.chip', quick).forEach(c => c.onclick = () => send(c.textContent)); };
+  async function reply() {
+    busy = true; el.classList.add('busy'); quick.innerHTML = '';
+    const b = bubble('a', '<span class="dots"><i></i><i></i><i></i></span>');
+    try { const full = await stream(persona(mode, false, tid), msgs, txt => { b.innerHTML = rich(txt); scroll(); }); msgs.push({ role: 'assistant', content: full }); }
+    catch (e) { b.classList.add('err'); b.textContent = e.message + ' Try again.'; msgs.pop(); }
+    busy = false; el.classList.remove('busy'); chips();
+  }
+  function send(text) {
+    text = (text || '').trim(); if (busy || !text) return;
+    bubble('u', rich(text)); msgs.push({ role: 'user', content: text }); input.value = ''; input.style.height = 'auto'; turns++; reply();
+  }
+  const close = () => { document.removeEventListener('keydown', onKey); el.remove(); if (turns && S.profile) remember(msgs.slice()); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  $('.x', el).onclick = close;
+  $$('.swap button', el).forEach(b => b.onclick = () => {
+    const k = b.dataset.t; if (busy || k === tid) return;
+    el.classList.replace('t-' + tid, 't-' + k); tid = k; if (S.profile) { S.profile.tutor = k; save(); }
+    $$('.swap button', el).forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); });
+    $('[data-face]', el).src = TUTORS[k].img; $('.nm', el).textContent = TUTORS[k].name; input.placeholder = `Message ${TUTORS[k].name}…`;
+    bubble('note', `${TUTORS[k].name} joined`); input.focus();
+  });
+  $('form', el).onsubmit = e => { e.preventDefault(); send(input.value); };
+  input.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input.value); } };
+  input.oninput = () => { input.style.height = 'auto'; input.style.height = input.scrollHeight + 'px'; };
+  if (ctx) { msgs.push({ role: 'user', content: ctx }); bubble('note', 'About what is on your screen'); reply(); }
+  else { bubble('a', esc(TUTORS[tid].hi)); chips(); }
+  input.focus({ preventScroll: true });
 }
 
 /* ---------- talk to each tutor (live chat used on the landing page, no sign-up) ---------- */
@@ -654,6 +774,9 @@ function landing() {
         <div class="l-plan"><span class="tag">Sample comeback plan</span><h3>Calculus retake in 5 days</h3>
           <div class="path">${plan.map((d, i) => `<div class="node mini ${d[2] ? 'done' : ''}"><div class="n">${d[2] ? IC.check : i + 1}</div><b>${d[0]}</b><div class="go-t">${d[1]} min</div></div>`).join('')}</div></div>
       </div></section>
+    <section class="l-sec"><h2>Study cards for ${Object.keys(CONTENT).length} topics</h2>
+      <div class="l-study">${['Derivatives', 'Normal distribution', 'Waves', 'Big-O complexity'].map(n => `<button class="l-sc" data-start>${plot(CONTENT[n].plot)}<b>${n}</b>
+        <div class="keys">${CONTENT[n].key.slice(0, 2).map(k => `<div class="key">${rich(k)}</div>`).join('')}</div></button>`).join('')}</div></section>
     <section class="l-sec" id="l-courses" hidden><h2>Courses</h2><div class="l-courses"></div></section>
     <section class="l-end">${art('nova-cheer')}<h2>Your next exam can go differently.</h2><button class="btn go big" data-start>Start free</button></section>
     <footer class="l-foot">Solva is an AI, not a human tutor or a mental-health service. 18+.</footer>
@@ -683,7 +806,7 @@ function landing() {
 }
 
 /* ---------- bridge for the courses + levels module (public/courses/) ---------- */
-window.Solva = { S, save, touchStreak, nav, home, landing, T, pic, confetti };
+window.Solva = { S, save, touchStreak, nav, home, landing, T, pic, confetti, ask: askTutor };
 
 /* ---------- boot ---------- */
 S.profile ? home() : landing();

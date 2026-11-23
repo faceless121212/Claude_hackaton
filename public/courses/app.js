@@ -305,7 +305,7 @@ function drawStep() {
   const pct = Math.round((idx / lesson.steps.length) * 100);
   let body;
   if (step.type === 'info') {
-    body = `<div class="step-card"><h2>${esc(step.title)}</h2><div class="rich">${rich(step.body)}</div></div>`;
+    body = `<div class="step-card teach"><img src="${solva.pic('')}" alt="${esc(solva.T().name)}"><div class="bubble"><h2>${esc(step.title)}</h2><div class="rich">${rich(step.body)}</div></div></div>`;
   } else if (step.type === 'choice') {
     body = `
       <div class="step-card">
@@ -328,6 +328,7 @@ function drawStep() {
         <a class="close" href="#/course/${course.id}" aria-label="Exit lesson">✕</a>
         ${bar(pct, course.color)}
         <span class="lesson-count">${idx + 1}/${lesson.steps.length}</span>
+        <button class="ask" id="ask" type="button"><img src="${solva.pic('')}" alt="">Ask ${esc(solva.T().name)}</button>
       </div>
       <div class="lesson-main">
         <small class="lesson-title">${esc(course.title)} · ${esc(lesson.title)}</small>
@@ -341,6 +342,8 @@ function drawStep() {
 
   const action = app.querySelector('#action');
   action.addEventListener('click', onAction);
+  app.querySelector('#ask').addEventListener('click', () => solva.ask(
+    `I am taking the course "${course.title}", lesson "${lesson.title}". The step on my screen is:\n${step.type === 'info' ? `${step.title}\n${step.body}` : `${step.prompt}${step.options ? '\nOptions: ' + step.options.join(' | ') : ''}`}\nHelp me understand it${step.type === 'info' ? '' : ' without just giving me the answer'}.`, 'solve'));
   app.querySelectorAll('.option').forEach((btn) => btn.addEventListener('click', () => selectOption(Number(btn.dataset.opt))));
   const input = app.querySelector('#answer');
   if (input) {
