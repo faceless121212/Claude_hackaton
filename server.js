@@ -13,8 +13,12 @@ for (const file of ['.env', 'keys.txt']) {
 }
 
 const PORT = process.env.PORT || 3000;
+// On Vercel there is no .env file: keys come from the project's Environment Variables.
+const HOSTED = !!process.env.VERCEL;
+const KEY_HELP = HOSTED ? 'In Vercel, open Settings, Environment Variables, add FAL_KEY or ANTHROPIC_API_KEY, then redeploy.'
+  : 'Add FAL_KEY or ANTHROPIC_API_KEY to .env (run: npm run key) and restart.';
 const KEY = process.env.FAL_KEY || '';
-const MODEL = process.env.MODEL || 'anthropic/claude-sonnet-5.5';
+const MODEL = process.env.MODEL || 'anthropic/claude-fable-5.2';
 // Spoken turns are short and latency matters more than depth, so voice mode uses a faster model.
 const VOICE_MODEL = process.env.VOICE_MODEL || 'anthropic/claude-haiku-5.5';
 const UPSTREAM = 'https://fal.run/openrouter/router/openai/v1/chat/completions';
@@ -31,7 +35,10 @@ function readBody(req, limit = 12e6) {
 
 // Provider: Claude directly when ANTHROPIC_API_KEY is set, otherwise Claude through fal (OpenRouter).
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-fable-5-2';
+// These models can decline a request; with fallbacks on, the API re-runs a declined request on another model.
+const CAN_FALL_BACK = /^claude-(fable-5-[12]|opus-5|sonnet-5-5)/;
+const DECLINED = "I can't help with that one. Try asking it another way.";
 const ANTHROPIC_VOICE_MODEL = process.env.ANTHROPIC_VOICE_MODEL || 'claude-haiku-5-5';
 
 function toAnthropic(messages) {
@@ -53,15 +60,19 @@ async function chat(req, res) {
   if (messages[0]?.role === 'assistant') messages.unshift({ role: 'user', content: '(The student opened a session.)' });
   const max_tokens = Math.min(body.max_tokens || 1500, 8000), stream = !!body.stream, system = String(body.system || ''), fast = !!body.fast;
   const fail = (code, error, detail) => res.writeHead(code, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error, detail }));
-  if (!KEY && !ANTHROPIC_KEY) return void fail(500, 'No API key is set. Add FAL_KEY (or ANTHROPIC_API_KEY) to the .env file and restart.');
+  if (!KEY && !ANTHROPIC_KEY) return void fail(500, 'No API key is set. ' + KEY_HELP);
 
+  const model = fast ? ANTHROPIC_VOICE_MODEL : ANTHROPIC_MODEL, fallback = CAN_FALL_BACK.test(model);
   let up;
   try {
     up = ANTHROPIC_KEY
       ? await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
-          headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: fast ? ANTHROPIC_VOICE_MODEL : ANTHROPIC_MODEL, system, messages: toAnthropic(messages), max_tokens, stream }),
+          headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json',
+            ...(fallback && { 'anthropic-beta': 'server-side-fallback-2026-07-01' }) },
+          // Low effort: these models think before every reply, and a short tutor message has to stay fast and inside max_tokens.
+          body: JSON.stringify({ model, system, messages: toAnthropic(messages), max_tokens, stream,
+            output_config: { effort: 'low' }, ...(fallback && { fallbacks: 'default' }) }),
         })
       : await fetch(UPSTREAM, {
           method: 'POST',
@@ -69,12 +80,19 @@ async function chat(req, res) {
           body: JSON.stringify({ model: fast ? VOICE_MODEL : MODEL, messages: [{ role: 'system', content: system }, ...messages], max_tokens, stream, reasoning: { effort: 'low' } }),
         });
   } catch (e) { return void fail(502, 'Cannot reach the model: ' + e.message); }
-  if (!up.ok) return void fail(502, up.status === 401 || up.status === 403 ? 'The API key was rejected. Check the key in .env or keys.txt and restart.'
-    : `The model is not responding (error ${up.status}).`, (await up.text()).slice(0, 400));
+  if (!up.ok) {
+    // Say why in the terminal: the provider's own message tells a wrong key from a key without access to the model.
+    const detail = (await up.text()).slice(0, 400);
+    console.error(`Model request failed (${up.status}) for ${ANTHROPIC_KEY ? model : fast ? VOICE_MODEL : MODEL}: ${detail}`);
+    return void fail(502, up.status === 401 ? 'The API key was rejected. ' + (HOSTED ? 'Check it in Vercel under Settings, Environment Variables, then redeploy.' : 'Check the key in .env or keys.txt and restart.')
+      : up.status === 403 ? 'This key is not allowed to use the model. The terminal shows why.'
+      : `The model is not responding (error ${up.status}).`, detail);
+  }
 
   if (!stream) {
     const j = await up.json();
-    const text = ANTHROPIC_KEY ? (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('') : (j.choices?.[0]?.message?.content || '');
+    const text = !ANTHROPIC_KEY ? (j.choices?.[0]?.message?.content || '')
+      : j.stop_reason === 'refusal' ? DECLINED : (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
     return void res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ text }));
   }
   res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
@@ -90,8 +108,9 @@ async function chat(req, res) {
           if (!line.startsWith('data:')) continue;
           try {
             const ev = JSON.parse(line.slice(5));
-            if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta')
-              res.write('data: ' + JSON.stringify({ choices: [{ delta: { content: ev.delta.text } }] }) + '\n\n');
+            const text = ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta' ? ev.delta.text
+              : ev.type === 'message_delta' && ev.delta?.stop_reason === 'refusal' ? '\n\n' + DECLINED : '';
+            if (text) res.write('data: ' + JSON.stringify({ choices: [{ delta: { content: text } }] }) + '\n\n');
           } catch {}
         }
       }
@@ -146,4 +165,6 @@ http.createServer((req, res) => {
 }).on('error', e => {
   console.error(e.code === 'EADDRINUSE' ? `Port ${PORT} is already in use. Close the other program or run with PORT=3001.` : e.message);
   process.exit(1);
-}).listen(PORT, () => { if (!KEY && !ANTHROPIC_KEY) console.warn('WARNING: no API key found. Copy .env.example to .env and add FAL_KEY.'); console.log(`Solva running at http://localhost:${PORT}  (${ANTHROPIC_KEY ? 'Claude direct: ' + ANTHROPIC_MODEL : 'Claude via fal: ' + MODEL})`); });
+}).listen(PORT, () => { if (!KEY && !ANTHROPIC_KEY) console.warn('No API key found, so the tutor will not answer. Run: npm run key'); console.log(`Solva running at http://localhost:${PORT}  (${ANTHROPIC_KEY ? 'Claude direct: ' + ANTHROPIC_MODEL : 'Claude via fal: ' + MODEL})`);
+  // Enough of the key to spot a wrong paste, never the whole thing.
+  const used = ANTHROPIC_KEY || KEY; if (used) console.log(`Key in use: ${used.slice(0, 10)}... (${used.length} characters)`); });

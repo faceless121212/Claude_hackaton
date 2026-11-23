@@ -25,10 +25,10 @@ Three mascot tutors (Nova, Max, Ada) share the same model with different persona
 Requires Node.js 18 or newer. There is nothing to install.
 
 ```bash
-cp .env.example .env
+npm run key
 ```
 
-Put your key in `.env` or in a `keys.txt` file with the same format (either `FAL_KEY`, or `ANTHROPIC_API_KEY` to call Claude directly), then:
+This creates `.env` and opens it in a text editor. Paste your key there (either `FAL_KEY`, or `ANTHROPIC_API_KEY` to call Claude directly) and save. A `keys.txt` file with the same format works too. Then:
 
 ```bash
 npm start
@@ -38,7 +38,7 @@ Open http://localhost:3000.
 
 ## How it is built
 
-- `server.js`: a dependency-free Node server. Serves `public/` and forwards chat requests to Claude, through fal by default or directly when `ANTHROPIC_API_KEY` is set. It also serves the voice endpoints, `/api/tts` and `/api/stt` (ElevenLabs through fal). These need `FAL_KEY`; without it the app uses the browser's built-in voice and speech recognition (Chrome or Edge). Spoken turns in voice mode use a faster model (`VOICE_MODEL`, Claude Haiku by default) so the tutor answers sooner; everything else uses `MODEL`.
+- `server.js`: a dependency-free Node server. Serves `public/` and forwards chat requests to Claude, through fal by default or directly when `ANTHROPIC_API_KEY` is set. It also serves the voice endpoints, `/api/tts` and `/api/stt` (ElevenLabs through fal). These need `FAL_KEY`; without it the app uses the browser's built-in voice and speech recognition (Chrome or Edge). Spoken turns in voice mode use a faster model (`VOICE_MODEL`, Claude Haiku by default) so the tutor answers sooner; everything else uses `MODEL` (Claude Fable 5.2 by default).
 - `public/content.js`: the study-card material (formulas, worked examples, check questions, graph specs), one entry per topic. To add a topic, add an entry here and list it under its subject in `SUBJECTS` in `app.js`.
 - `public/app.js`: the whole app in plain JavaScript (landing page, onboarding, home, tutor chat, voice mode, practice, mock exam, memory). State is kept in the browser's local storage.
 - `public/courses/`: the courses and levels module, loaded as an ES module after `app.js`.
