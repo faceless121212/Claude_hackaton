@@ -1,4 +1,4 @@
-/* Lemma — AI study companion for math & STEM. Vanilla JS, no build step. */
+/* Solva — AI study companion for math & STEM. Vanilla JS, no build step. */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const app = document.getElementById('app');
@@ -35,9 +35,9 @@ const SITUATIONS = {
 
 /* ---------- state ---------- */
 const S = Object.assign({ profile: null, xp: 0, streak: 0, lastDay: null, plan: null, done: {}, memory: { notes: [], topics: {} } },
-  JSON.parse(localStorage.getItem('lemma') || 'null') || {});
+  JSON.parse(localStorage.getItem('solva') || localStorage.getItem('lemma') || 'null') || {}); // 'lemma' is the key from before the rename
 S.memory = S.memory || { notes: [], topics: {} };
-const save = () => localStorage.setItem('lemma', JSON.stringify(S));
+const save = () => localStorage.setItem('solva', JSON.stringify(S));
 const track = (topic, ok) => { const t = S.memory.topics[topic] = S.memory.topics[topic] || { n: 0, ok: 0 }; t.n++; if (ok) t.ok++; save(); };
 const weakTopics = () => Object.entries(S.memory.topics).filter(([, v]) => v.n >= 2 && v.ok / v.n < 0.6).sort((a, b) => a[1].ok / a[1].n - b[1].ok / b[1].n).map(([k]) => k);
 const strongTopics = () => Object.entries(S.memory.topics).filter(([, v]) => v.n >= 3 && v.ok / v.n >= 0.8).map(([k]) => k);
@@ -98,7 +98,7 @@ function persona(mode, voice) {
     comeback: `MODE: the student failed or did badly on an exam. Order of work: (1) acknowledge the feeling in one or two honest sentences, no toxic positivity, no lecture; (2) ask ONE question at a time to learn what happened: which exam, which questions went wrong, whether it was knowledge gaps, time pressure, panic or careless slips, and when the retake or next exam is; (3) after two or three exchanges, tell them you have enough to build a comeback plan and that they can press the green "Build my plan" button.`,
     why: 'MODE: the student just answered a practice question and wants to understand it. Find the misconception with a question before explaining.',
   };
-  return `You are ${t.name}, an AI study companion for math and STEM inside the web app Lemma. You are an AI, not a human, and you say so plainly if asked.
+  return `You are ${t.name}, an AI study companion for math and STEM inside the web app Solva. You are an AI, not a human, and you say so plainly if asked.
 PERSONALITY: ${t.style}
 STUDENT: ${p.name}, ${p.level}, studying ${p.subject}.
 ${memoryBlock()}
@@ -163,7 +163,7 @@ window.speechSynthesis?.getVoices();
 
 /* ---------- shared bits ---------- */
 function nav() {
-  return `<div class="nav"><div class="logo"><i>λ</i>Lemma</div><div class="sp"></div>
+  return `<div class="nav"><div class="logo"><img src="/img/logo.webp" alt="">Solva</div><div class="sp"></div>
     <a class="pill courses" href="#/courses">${ico('homework')} <b>Courses</b></a>
     <div class="pill fire">${ico('streak')} <b>${S.streak}</b> day${S.streak === 1 ? '' : 's'}</div>
     <div class="pill xp">${ico('xp')} <b>${S.xp}</b> XP</div>
@@ -553,7 +553,7 @@ function landing() {
     ['#F3F1EA', 'practice', 'Practice', 'Adapts as you answer.'],
   ];
   app.innerHTML = `<div class="land">
-    <header class="l-nav"><div class="logo"><i>λ</i>Lemma</div><div class="sp"></div><button class="btn" data-start>${S.profile ? 'Open app' : 'Start free'}</button></header>
+    <header class="l-nav"><div class="logo"><img src="/img/logo.webp" alt="">Solva</div><div class="sp"></div><button class="btn" data-start>${S.profile ? 'Open app' : 'Start free'}</button></header>
     <section class="l-hero"><div>
         <span class="tag">University math & science</span>
         <h1>Bad exam? Come back stronger.</h1>
@@ -566,14 +566,14 @@ function landing() {
     <section class="l-sec"><h2>Pick your tutor</h2>
       <div class="tutors">${Object.entries(TUTORS).map(([k, t]) => `<div class="tutor t-${k}"><img src="${t.img}" alt=""><div><b>${t.name}</b><span>${t.blurb}</span></div></div>`).join('')}</div></section>
     <section class="l-end"><img src="/img/nova-cheer.webp" alt=""><h2>Next exam, different result.</h2><button class="btn go big" data-start>Start free</button></section>
-    <footer class="l-foot">Lemma is an AI, not a human tutor or a mental-health service. For adults 18+.</footer>
+    <footer class="l-foot">Solva is an AI, not a human tutor or a mental-health service. For adults 18+.</footer>
   </div>`;
   $$('[data-start]').forEach(b => b.onclick = start);
   window.scrollTo(0, 0);
 }
 
 /* ---------- bridge for the courses + levels module (public/courses/) ---------- */
-window.Lemma = { S, save, touchStreak, nav, home, landing, T, pic, confetti };
+window.Solva = { S, save, touchStreak, nav, home, landing, T, pic, confetti };
 
 /* ---------- boot ---------- */
 S.profile ? home() : landing();

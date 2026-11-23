@@ -15,10 +15,10 @@ export const LEVEL_TITLES = [
 const listeners = new Set();
 let state = load();
 
-// Inside Lemma, XP and the streak belong to Lemma's own state (window.Lemma.S), so practice,
+// Inside Solva, XP and the streak belong to Solva's own state (window.Solva.S), so practice,
 // mock exams and course lessons all feed one total. Standalone, we keep our own.
-const lemma = () => globalThis.Lemma;
-export function totalXp() { return lemma() ? lemma().S.xp : state.xp; }
+const solva = () => globalThis.Solva;
+export function totalXp() { return solva() ? solva().S.xp : state.xp; }
 
 function blank() {
   return { xp: 0, completed: {}, streak: { count: 0, lastDay: null }, daily: { day: null, xp: 0 }, activeCourse: null };
@@ -43,7 +43,7 @@ function dayKey(d = new Date()) {
 
 export function subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 export function getState() { return state; }
-/** Clears course progress (and standalone XP). Lemma's XP and streak are left alone. */
+/** Clears course progress (and standalone XP). Solva's XP and streak are left alone. */
 export function reset() { state = blank(); save(); }
 
 // ---- User level -----------------------------------------------------------
@@ -70,8 +70,8 @@ export function levelInfo(xp = totalXp()) {
 // ---- Streak & daily goal --------------------------------------------------
 
 export function streak() {
-  if (lemma()) {
-    const { streak: count, lastDay } = lemma().S;
+  if (solva()) {
+    const { streak: count, lastDay } = solva().S;
     return { count, activeToday: lastDay === new Date().toISOString().slice(0, 10) };
   }
   const { count, lastDay } = state.streak;
@@ -148,10 +148,10 @@ export function addXp(amount) {
   const before = levelInfo().level;
   const today = dayKey();
   state.daily = { day: today, xp: (state.daily.day === today ? state.daily.xp : 0) + amount };
-  if (lemma()) {
-    lemma().S.xp += amount;
-    lemma().touchStreak();
-    lemma().save();
+  if (solva()) {
+    solva().S.xp += amount;
+    solva().touchStreak();
+    solva().save();
   } else {
     state.xp += amount;
     touchStreak();
