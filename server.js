@@ -13,6 +13,10 @@ for (const file of ['.env', 'keys.txt']) {
 }
 
 const PORT = process.env.PORT || 3000;
+// On Vercel there is no .env file: keys come from the project's Environment Variables.
+const HOSTED = !!process.env.VERCEL;
+const KEY_HELP = HOSTED ? 'In Vercel, open Settings, Environment Variables, add FAL_KEY or ANTHROPIC_API_KEY, then redeploy.'
+  : 'Add FAL_KEY or ANTHROPIC_API_KEY to .env (run: npm run key) and restart.';
 const KEY = process.env.FAL_KEY || '';
 const MODEL = process.env.MODEL || 'anthropic/claude-fable-5.2';
 // Spoken turns are short and latency matters more than depth, so voice mode uses a faster model.
@@ -56,7 +60,7 @@ async function chat(req, res) {
   if (messages[0]?.role === 'assistant') messages.unshift({ role: 'user', content: '(The student opened a session.)' });
   const max_tokens = Math.min(body.max_tokens || 1500, 8000), stream = !!body.stream, system = String(body.system || ''), fast = !!body.fast;
   const fail = (code, error, detail) => res.writeHead(code, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error, detail }));
-  if (!KEY && !ANTHROPIC_KEY) return void fail(500, 'No API key is set. Add FAL_KEY (or ANTHROPIC_API_KEY) to the .env file and restart.');
+  if (!KEY && !ANTHROPIC_KEY) return void fail(500, 'No API key is set. ' + KEY_HELP);
 
   const model = fast ? ANTHROPIC_VOICE_MODEL : ANTHROPIC_MODEL, fallback = CAN_FALL_BACK.test(model);
   let up;
@@ -80,7 +84,7 @@ async function chat(req, res) {
     // Say why in the terminal: the provider's own message tells a wrong key from a key without access to the model.
     const detail = (await up.text()).slice(0, 400);
     console.error(`Model request failed (${up.status}) for ${ANTHROPIC_KEY ? model : fast ? VOICE_MODEL : MODEL}: ${detail}`);
-    return void fail(502, up.status === 401 ? 'The API key was rejected. Check the key in .env or keys.txt and restart.'
+    return void fail(502, up.status === 401 ? 'The API key was rejected. ' + (HOSTED ? 'Check it in Vercel under Settings, Environment Variables, then redeploy.' : 'Check the key in .env or keys.txt and restart.')
       : up.status === 403 ? 'This key is not allowed to use the model. The terminal shows why.'
       : `The model is not responding (error ${up.status}).`, detail);
   }
