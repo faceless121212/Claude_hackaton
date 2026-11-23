@@ -260,3 +260,6 @@ a.node:active { transform: translateY(7px); box-shadow: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* generated course art (public/img/c-*.webp) used in place of emoji; sized by the surrounding font-size */
+.ico { width: 1.35em; height: 1.35em; object-fit: contain; vertical-align: -.32em; }

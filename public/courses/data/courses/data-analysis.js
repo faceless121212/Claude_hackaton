@@ -4,7 +4,7 @@ export default {
   category: 'data',
   tagline: 'Read numbers and charts like a data detective',
   description: 'Learn to summarize data, read charts critically, and avoid the classic traps people fall into when numbers tell a story.',
-  icon: '📊',
+  icon: '<img class="ico" src="/img/c-data-analysis.webp" alt="">',
   color: '#10b981',
   difficulty: 'Beginner',
   isNew: false,
