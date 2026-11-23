@@ -236,3 +236,25 @@ p{margin:0} button{font:inherit;color:inherit;cursor:pointer;border:0;background
 .p-foot .fb{min-width:min(100%,380px)} .p-foot .in{flex-wrap:nowrap;align-items:center} .p-foot .bs{flex:none}
 @media(max-width:700px){.p-foot .in{flex-wrap:wrap}}
 .call-cap{max-height:38vh;overflow:auto}
+
+/* v3: generated 3D icons, line icons, tighter copy */
+.ic{width:22px;height:22px;object-fit:contain;vertical-align:-5px;flex:none}
+.ic.big{width:72px;height:72px;display:block}
+.sv{width:20px;height:20px;flex:none;vertical-align:-4px}
+.pill .ic{width:22px;height:22px;margin:-2px 0}
+.x .sv{width:18px;height:18px} .send .sv{width:24px;height:24px} .mic-big .sv{width:38px;height:38px} .icon .sv{width:21px;height:21px;color:#55545e}
+.icon.rec .sv{color:#fff}
+.btn .ic{width:24px;height:24px;margin:-4px 0}
+.opt .ico{background:none!important;width:64px;height:64px} .opt .ico .ic{width:64px;height:64px}
+.ob .sub:empty{display:none} .ob h1{margin-bottom:22px} .ob h1+.sub{margin-top:-12px}
+.act{min-height:0;padding:18px;gap:2px;justify-content:flex-start;align-items:flex-start}
+.act .ic{width:76px;height:76px;margin-bottom:10px;transition:transform .15s}
+.act:hover .ic{transform:scale(1.08) rotate(-4deg)}
+.act b{font-size:21px} .act span{font-size:14.5px}
+.node{grid-template-columns:52px 1fr auto}
+.l-hero h1{font-size:clamp(40px,6vw,72px)} .l-sub{font-size:22px}
+.l-sec{padding-top:48px}
+.l-card{display:grid;gap:4px;justify-items:start} .l-card h3{margin:10px 0 0}
+.l-b{font-size:16.5px}
+.rv-h .n .sv{width:16px;height:16px} .node .n .sv{width:22px;height:22px}
+.stage .ai{margin-top:10px}
