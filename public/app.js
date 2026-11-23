@@ -182,19 +182,19 @@ function confetti() {
 function onboarding(step = 0, d = { name: '', subject: 'Math', level: 'University', situation: 'failed', tutor: 'nova' }) {
   const pct = [25, 60, 100][step];
   const body = [
-    () => `<h1>Let's set you up.</h1><p class="sub">Three quick questions.</p>
+    () => `<h1>Let's set you up.</h1>
       <label class="label">Your name</label>
       <input class="field" id="name" placeholder="First name" value="${esc(d.name)}" maxlength="30" autocomplete="given-name">
       <label class="label">Subject</label>
       <div class="chips" data-k="subject">${Object.keys(SUBJECTS).map(s => `<button class="chip ${d.subject === s ? 'on' : ''}" data-v="${s}">${s}</button>`).join('')}</div>
       <label class="label">Level</label>
       <div class="chips" data-k="level">${['High school', 'University'].map(s => `<button class="chip ${d.level === s ? 'on' : ''}" data-v="${s}">${s}</button>`).join('')}</div>`,
-    () => `<h1>What brings you here?</h1><p class="sub"></p>
+    () => `<h1>What brings you here?</h1>
       <div class="opts" data-k="situation">${Object.entries(SITUATIONS).map(([k, s]) => `<button class="opt ${d.situation === k ? 'on' : ''}" data-v="${k}">
-        <div class="ico" style="background:${s.bg}">${ico(s.ico)}</div><div><b>${s.t}</b><span>${s.d}</span></div></button>`).join('')}</div>`,
-    () => `<h1>Pick your tutor.</h1><p class="sub">You can switch later.</p>
+        <div class="ico" style="background:${s.bg}">${ico(s.ico)}</div><div><b>${s.t}</b></div></button>`).join('')}</div>`,
+    () => `<h1>Pick your tutor.</h1>
       <div class="tutors" data-k="tutor">${Object.entries(TUTORS).map(([k, t]) => `<button class="tutor t-${k} ${d.tutor === k ? 'on' : ''}" data-v="${k}">
-        <img src="${t.img}" alt=""><div><b>${t.name}</b><span>${t.blurb}</span><em>${t.tag}</em></div></button>`).join('')}</div>`,
+        <img src="${t.img}" alt=""><div><b>${t.name}</b><span>${t.blurb}</span></div></button>`).join('')}</div>`,
   ][step]();
   app.innerHTML = `<div class="ob"><div class="ob-bar"><i style="width:${pct}%"></i></div>${body}
     <div class="foot">${step ? '<button class="btn ghost" id="back">Back</button>' : '<span></span>'}
@@ -232,10 +232,10 @@ function home() {
         ? `<button class="btn go" id="h-come">Talk to ${t.name}</button>` : `<button class="btn go" id="h-solve">Solve a problem</button>`}</div></div></div>
     <div id="courses-slot"></div>
     <div class="acts">
-      <button class="act a1" id="a-solve">${ico('solve')}<b>Solve</b><span>Hints first</span></button>
-      <button class="act a2" id="a-prac">${ico('practice')}<b>Practice</b><span>5 questions</span></button>
-      <button class="act a3" id="a-come">${ico('comeback')}<b>Bad exam?</b><span>Get a plan</span></button>
-      <button class="act a4" id="a-mock">${ico('mock')}<b>Mock exam</b><span>6 minutes</span></button>
+      <button class="act a1" id="a-solve">${ico('solve')}<b>Solve</b></button>
+      <button class="act a2" id="a-prac">${ico('practice')}<b>Practice</b></button>
+      <button class="act a3" id="a-come">${ico('comeback')}<b>Bad exam?</b></button>
+      <button class="act a4" id="a-mock">${ico('mock')}<b>Mock exam</b></button>
     </div>
     <div id="mem-slot">${memCard()}</div>
     <div class="sec">${S.plan ? 'Your plan' : esc(p.subject)}</div>
@@ -375,7 +375,7 @@ Give 5 days. Order days so the biggest cause of lost marks comes first. If the c
     if (!Array.isArray(plan.days) || !plan.days.length) throw new Error('empty');
     S.plan = plan; S.done = {}; save(); remember(msgs.slice()); confetti(); home(); window.scrollTo(0, 0);
   } catch (e) {
-    app.innerHTML = `<div class="wrap"><div class="load"><h2>That didn't work.</h2><p class="muted">${esc(e.message)}</p><button class="btn" id="b">Back home</button></div></div>`;
+    app.innerHTML = `<div class="wrap"><div class="load"><h2>That didn't work.</h2><p class="lead">${esc(e.message)}</p><button class="btn" id="b">Back home</button></div></div>`;
     $('#b').onclick = home;
   }
 }
@@ -438,7 +438,7 @@ function practice(topic, dayIdx = null) {
     save();
     const line = score === N ? 'Flawless.' : score >= 3 ? 'Solid. We fix the misses next.' : 'Tough set. Now we know where to work.';
     shell(`<div class="result"><img src="${pic(score >= 3 ? 'cheer' : 'care')}" alt=""><div class="score">${score}/${N}</div><h2>${esc(topic)}</h2>
-      <p class="muted">${line}</p>
+      <p class="lead">${line}</p>
       <div class="stats"><div class="pill xp">${ico('xp')} <b>+${earned}</b> XP</div><div class="pill fire">${ico('streak')} <b>${S.streak}</b></div>${dayIdx != null ? '<div class="pill">Plan day done</div>' : ''}</div>
       <div class="stats" style="margin-top:10px"><button class="btn ghost" id="again">Again</button><button class="btn go big" id="homeb">Home</button></div></div>`);
     if (score >= 3) confetti();
@@ -474,7 +474,7 @@ function mock() {
   const wrap = inner => { app.innerHTML = `<div class="prac t-${p.tutor}">${inner}</div>`; };
   wrap(`<div class="p-top"><button class="x" id="close">${svg('x')}</button><div class="segs"></div></div>
     <div class="result"><img src="${pic('')}" alt=""><h1>Mock exam</h1>
-    <p class="muted">${N} questions · ${SECS / 60} minutes · no hints</p>
+    <p class="lead">${N} questions · ${SECS / 60} minutes · no hints</p>
     <button class="btn go big" id="start">Start</button></div>`);
   $('#close').onclick = home;
   $('#start').onclick = async () => {
@@ -521,11 +521,11 @@ function mock() {
     save();
     wrap(`<div class="p-top"><button class="x" id="close">${svg('x')}</button><div class="segs">${oks.map(o => `<i class="${o ? 'ok' : 'no'}"></i>`).join('')}</div><div class="pill xp">${ico('xp')} <b>+${score * 10}</b></div></div>
       <div class="result" style="padding-top:0"><img src="${pic(score >= 3 ? 'cheer' : 'care')}" alt=""><div class="score">${score}/${qs.length}</div>
-        <p class="muted">${Math.floor(used / 60)} min ${used % 60} s</p></div>
+        <p class="lead">${Math.floor(used / 60)} min ${used % 60} s</p></div>
       <div class="hint" style="margin:0 0 26px"><img src="${pic(score >= 3 ? '' : 'care')}" alt=""><div id="rev"><span class="dots"><i></i><i></i><i></i></span></div></div>
       <div class="sec">Review</div>
       <div class="path">${qs.map((q, k) => `<div class="rv ${oks[k] ? 'ok' : 'no'}"><div class="rv-h"><span class="n">${oks[k] ? svg('check') : svg('x')}</span><b>${esc(q.main)}</b>
-        <span class="muted">${picks[k] ? `You chose ${picks[k]}` : 'No answer'} · correct: ${q.ANSWER}</span></div>
+        <span>${picks[k] ? `You chose ${picks[k]}` : 'No answer'} · correct ${q.ANSWER}</span></div>
         <div class="rv-q">${rich(q.Q)}</div><p class="rv-w">${rich(q.WHY || '')}</p>
         ${oks[k] ? '' : `<button class="btn ghost" data-why="${k}">Work through it</button>`}</div>`).join('')}</div>
       <div class="stats" style="margin-top:26px">${missed.length ? `<button class="btn go big" id="fix">Practise ${esc(missed[0])}</button>` : ''}<button class="btn ghost" id="homeb">Home</button></div>`);
@@ -558,13 +558,13 @@ function landing() {
         <span class="tag">University math & science</span>
         <h1>Bad exam? Come back stronger.</h1>
         <p class="l-sub">An AI tutor that solves with you, not for you.</p>
-        <div class="l-cta"><button class="btn go big" data-start>Start free</button><span class="muted">No sign-up</span></div></div>
+        <div class="l-cta"><button class="btn go big" data-start>Start free</button></div></div>
       <div class="l-art"><div class="l-blob"></div><img class="m1" src="/img/nova-care.webp" alt="Nova, a round green mascot"><img class="m2" src="/img/max-cheer.webp" alt="Max, a purple cube mascot"><img class="m3" src="/img/ada.webp" alt="Ada, a yellow triangle mascot">
         <div class="l-b b1">I failed calculus.</div><div class="l-b b2">Let's find the lost marks.</div></div>
     </section>
     <section class="l-sec"><div class="l-grid">${feats.map(f => `<div class="l-card" style="background:${f[0]}">${ico(f[1], 'big')}<h3>${f[2]}</h3><p>${f[3]}</p></div>`).join('')}</div></section>
     <section class="l-sec"><h2>Pick your tutor</h2>
-      <div class="tutors">${Object.entries(TUTORS).map(([k, t]) => `<div class="tutor t-${k}"><img src="${t.img}" alt=""><div><b>${t.name}</b><span>${t.blurb}</span><em>${t.tag}</em></div></div>`).join('')}</div></section>
+      <div class="tutors">${Object.entries(TUTORS).map(([k, t]) => `<div class="tutor t-${k}"><img src="${t.img}" alt=""><div><b>${t.name}</b><span>${t.blurb}</span></div></div>`).join('')}</div></section>
     <section class="l-end"><img src="/img/nova-cheer.webp" alt=""><h2>Next exam, different result.</h2><button class="btn go big" data-start>Start free</button></section>
     <footer class="l-foot">Lemma is an AI, not a human tutor or a mental-health service. For adults 18+.</footer>
   </div>`;
