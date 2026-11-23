@@ -83,8 +83,8 @@ async function post(body) {
   if (!r.ok) { let m = 'The tutor is unreachable right now.'; try { m = (await r.json()).error || m; } catch {} throw new Error(m); }
   return r;
 }
-async function ask(system, messages, max_tokens = 1500) {
-  return (await (await post({ system, messages, max_tokens })).json()).text;
+async function ask(system, messages, max_tokens = 1500, fast = false) {
+  return (await (await post({ system, messages, max_tokens, fast })).json()).text;
 }
 async function stream(system, messages, onText, max_tokens = 1500, fast = false) {
   const r = await post({ system, messages, stream: true, max_tokens, fast });
@@ -146,7 +146,7 @@ async function remember(msgs) {
   try {
     const out = await ask(`You keep a tutor's long-term memory about one student. From the session transcript, extract up to 3 NEW facts worth remembering for future sessions: which exam went wrong and why, exam dates, specific misconceptions, topics they struggle with, what kind of explanation worked, how they felt.
 One fact per line, third person, max 12 words each, plain text, no LaTeX, no bullets. Do not repeat anything already known. If there is nothing new worth keeping, output exactly NONE.
-Already known:\n${S.memory.notes.join('\n') || '(nothing yet)'}`, [{ role: "user", content: transcript }], 1200);
+Already known:\n${S.memory.notes.join('\n') || '(nothing yet)'}`, [{ role: "user", content: transcript }], 1200, true); // a short extraction: the fast model is enough
     const lines = out.split('\n').map(x => x.replace(/^[-•\d.\s]+/, '').trim()).filter(x => x && !/^none\.?$/i.test(x)).slice(0, 3);
     if (!lines.length) return;
     S.memory.notes = [...lines, ...S.memory.notes].slice(0, 10); save();
@@ -269,7 +269,7 @@ function home() {
     if (S.dailyDone === today()) return; // XP once a day
     S.dailyDone = today(); S.xp += 5; track(dt, ok);
     $('#d-xp').innerHTML = `${IC.check} Done`; $('.nav .pill.xp b').textContent = S.xp; if (ok) confetti();
-  });
+  }, DAILY[dt] || CONTENT[dt].check);
   $$('.node').forEach(n => n.onclick = () => n.dataset.day != null ? practice(S.plan.days[+n.dataset.day].focus, +n.dataset.day)
     : CONTENT[n.dataset.topic] ? topic(n.dataset.topic) : practice(n.dataset.topic));
   $('.logo').onclick = landing;
@@ -617,8 +617,7 @@ function plot(spec, w = 320, h = 200) {
 }
 
 /* ---------- one curated question, answerable in place (study card, daily problem) ---------- */
-function checkCard(el, name, onDone) {
-  const c = CONTENT[name].check;
+function checkCard(el, name, onDone, c = CONTENT[name].check) {
   el.innerHTML = `<div class="q">${rich(c.q)}</div>
     <div class="choices two">${c.c.map((x, i) => `<button class="choice" data-i="${i}"><span class="k">${'ABCD'[i]}</span><span>${rich(x)}</span></button>`).join('')}</div><div class="ck-fb"></div>`;
   $$('.choice', el).forEach(b => b.onclick = () => {
