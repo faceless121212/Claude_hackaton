@@ -164,6 +164,7 @@ window.speechSynthesis?.getVoices();
 /* ---------- shared bits ---------- */
 function nav() {
   return `<div class="nav"><div class="logo"><i>λ</i>Lemma</div><div class="sp"></div>
+    <a class="pill courses" href="#/courses">${ico('homework')} <b>Courses</b></a>
     <div class="pill fire">${ico('streak')} <b>${S.streak}</b> day${S.streak === 1 ? '' : 's'}</div>
     <div class="pill xp">${ico('xp')} <b>${S.xp}</b> XP</div>
     <img class="me" src="${T().img}" title="Change tutor or start over" alt="${T().name}"></div>`;
@@ -229,6 +230,7 @@ function home() {
     <div class="hero"><img src="${pic(S.plan ? 'cheer' : '')}" alt="${t.name}"><div class="say"><h2>${greet[0]}</h2><p>${greet[1]}</p>
       <div class="cta">${S.plan ? `<button class="btn go" id="h-next">Continue</button>` : p.situation === 'failed'
         ? `<button class="btn go" id="h-come">Talk to ${t.name}</button>` : `<button class="btn go" id="h-solve">Solve a problem</button>`}</div></div></div>
+    <div id="courses-slot"></div>
     <div class="acts">
       <button class="act a1" id="a-solve">${ico('solve')}<b>Solve</b><span>Hints first</span></button>
       <button class="act a2" id="a-prac">${ico('practice')}<b>Practice</b><span>5 questions</span></button>
@@ -250,6 +252,7 @@ function home() {
   $$('.node').forEach(n => n.onclick = () => n.dataset.day != null ? practice(S.plan.days[+n.dataset.day].focus, +n.dataset.day) : practice(n.dataset.topic));
   $('.me').onclick = () => { if (confirm('Switch tutor?')) onboarding(2, { ...S.profile }); };
   $('.logo').onclick = landing;
+  window.Courses?.homeCard($('#courses-slot'));
 }
 
 /* ---------- tutor session (chat) ---------- */
@@ -568,6 +571,9 @@ function landing() {
   $$('[data-start]').forEach(b => b.onclick = start);
   window.scrollTo(0, 0);
 }
+
+/* ---------- bridge for the courses + levels module (public/courses/) ---------- */
+window.Lemma = { S, save, touchStreak, nav, home, landing, T, pic, confetti };
 
 /* ---------- boot ---------- */
 S.profile ? home() : landing();

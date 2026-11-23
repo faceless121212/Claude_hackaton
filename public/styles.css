@@ -237,6 +237,9 @@ p{margin:0} button{font:inherit;color:inherit;cursor:pointer;border:0;background
 @media(max-width:700px){.p-foot .in{flex-wrap:wrap}}
 .call-cap{max-height:38vh;overflow:auto}
 
+/* courses link in the nav (module lives in public/courses/) */
+.pill.courses{color:var(--ink);text-decoration:none;box-shadow:0 3px 0 var(--line)} .pill.courses:hover{border-color:var(--ink)}
+@media(max-width:520px){.pill.courses b{display:none}.nav{gap:6px}.nav .pill{padding:7px 10px;font-size:13px}.nav .logo{font-size:0;gap:0}.nav .logo i{font-size:19px}}
 /* v3: generated 3D icons, line icons, tighter copy */
 .ic{width:22px;height:22px;object-fit:contain;vertical-align:-5px;flex:none}
 .ic.big{width:72px;height:72px;display:block}
