@@ -123,14 +123,14 @@ TEACHING RULES:
 - Be Socratic. Never dump a full solution up front. Give ONE step, hint or guiding question per message, then stop and wait.
 - If the student is stuck twice on the same step, or explicitly asks for the full solution, give a clean numbered worked solution.
 - Always check the student's working yourself before saying it is right. If it is wrong, point to the exact line and ask them to look again.
-- Keep every message under 60 words: short sentences, one idea. It is shown in a chat bubble next to your face.
+- Keep every message under 50 words: two or three short sentences. No preamble, no recap of what the student just said.
 - Write math in LaTeX: $...$ inline and $$...$$ on its own line. No markdown headings or tables.
 - Celebrate real progress briefly and specifically.
 CARE RULES:
 - A bad exam is an event, not an identity. Never call the student lazy or bad at the subject.
 - If the student expresses hopelessness beyond exam stress or any thought of harming themselves, stop tutoring, respond with care, and encourage them to talk to someone they trust or a local crisis line right now.
 - Stay on studying and the student's wellbeing around it. You are not a romantic or adult companion.${voice ? `
-VOICE MODE (overrides the format rules above): your reply is read aloud. Maximum 45 words. No LaTeX, no symbols, no lists. Say math in plain words, for example "x squared plus three x". One idea per reply, then a short question.` : ''}`;
+VOICE MODE (overrides the format rules above): your reply is read aloud. Maximum 30 words. No LaTeX, no symbols, no lists. Say math in plain words, for example "x squared plus three x". One idea per reply, then a short question.` : ''}`;
 }
 
 /* ---------- memory ---------- */
@@ -156,11 +156,11 @@ Already known:\n${S.memory.notes.join('\n') || '(nothing yet)'}`, [{ role: "user
 function memCard() {
   const m = S.memory, weak = weakTopics();
   if (!m.notes.length && !weak.length) return '';
-  return `<div class="mem"><div class="mem-h"><img src="${pic('')}" alt=""><b>What ${T().name} remembers about you</b><button class="linkish" onclick="forgetAll()">Forget everything</button></div>
+  return `<div class="mem"><div class="mem-h"><img src="${pic('')}" alt=""><b>${T().name} remembers</b><button class="linkish" onclick="forgetAll()">Forget</button></div>
     <ul>${m.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>
-    ${weak.length ? `<div class="chips">${weak.map(w => `<span class="weak">Needs work: ${esc(w)}</span>`).join('')}</div>` : ''}</div>`;
+    ${weak.length ? `<div class="chips">${weak.map(w => `<span class="weak">Weak: ${esc(w)}</span>`).join('')}</div>` : ''}</div>`;
 }
-window.forgetAll = () => { if (confirm('Erase everything your tutor remembers about you?')) { S.memory = { notes: [], topics: {} }; save(); home(); } };
+window.forgetAll = () => { if (confirm('Erase the tutor memory?')) { S.memory = { notes: [], topics: {} }; save(); home(); } };
 
 /* ---------- speech ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -398,10 +398,10 @@ async function buildPlan(msgs) {
   try {
     const text = await ask(`You are ${t.name}, an AI study coach. From the conversation, write a comeback plan for ${p.name} (${p.level}, ${p.subject}) after a bad exam.
 Return ONLY valid JSON, no code fence, no LaTeX, no backslashes:
-{"headline": "short, specific, encouraging title (max 9 words)",
- "diagnosis": ["3 honest observations about what actually went wrong, kind and concrete, max 12 words each"],
- "days": [{"day": 1, "focus": "one specific topic to practise (2-5 words, usable as a quiz topic)", "task": "what to do, max 12 words", "minutes": 20}],
- "pep": "one short sentence (max 14 words) in your own voice for the student to read tomorrow morning"}
+{"headline": "specific, encouraging title (max 6 words)",
+ "diagnosis": ["exactly 3 honest observations about what went wrong, kind and concrete, max 9 words each"],
+ "days": [{"day": 1, "focus": "one specific topic to practise (2-4 words, usable as a quiz topic)", "task": "what to do, max 9 words, starts with a verb", "minutes": 20}],
+ "pep": "one short sentence in your own voice, max 10 words"}
 Give 5 days. Order days so the biggest cause of lost marks comes first. If the cause was time pressure or panic, include a timed-practice day and a day on exam technique for this subject. Base everything on what the student said; do not invent details they did not mention.`,
       [{ role: "user", content: transcript }], 2500);
     const plan = JSON.parse(text.match(/\{[\s\S]*\}/)[0]);
@@ -486,7 +486,7 @@ function genQ(topic, level, asked = []) {
   const p = S.profile;
   const attempt = () => ask(`You write practice questions for a study app. Be mathematically exact: solve the question yourself and make sure exactly one choice is correct.`,
     [{ role: 'user', content: `Write ONE multiple-choice question for a ${p.level} student. Subject: ${p.subject}. Topic: ${topic}. Difficulty ${level} of 3.
-It must be answerable in under two minutes with at most a few lines of working. Wrong choices should each come from a specific common mistake. Every choice must be a short, clearly different final answer (no two choices may be equivalent). Vary which letter is correct.
+It must be answerable in under two minutes with at most a few lines of working. Wrong choices should each come from a specific common mistake. Each choice is only a short final answer (a number or one expression, no explanation), and all four must be different. Vary which letter is correct.
 Write math in LaTeX with $...$. Do not repeat these earlier questions: ${asked.join(' | ') || 'none'}.
 Output exactly this format and nothing else:
 TOPIC: <2-4 word sub-topic>
@@ -568,7 +568,7 @@ function mock() {
     if ($('#fix')) $('#fix').onclick = () => practice(missed[0]);
     $$('[data-why]').forEach(b => b.onclick = () => { const q = qs[+b.dataset.why], k = +b.dataset.why;
       session('why', `In a timed mock exam I got this question wrong.\n\nQuestion: ${q.Q}\nA) ${q.choices.A}\nB) ${q.choices.B}\nC) ${q.choices.C}\nD) ${q.choices.D}\n\nI chose ${picks[k] || 'nothing (ran out of time)'}. The correct answer is ${q.ANSWER}. Help me see where my thinking went wrong.`); });
-    stream(`You are ${t.name}, an AI study coach. Personality: ${t.style} Give ${p.name} a debrief of their timed mock exam in under 45 words: one honest sentence on the result, then the single most valuable thing to fix first and why, then one concrete next step. Plain text, no LaTeX, no lists. If time ran out or questions were blank, address pacing.`,
+    stream(`You are ${t.name}, an AI study coach. Personality: ${t.style} Give ${p.name} a debrief of their timed mock exam in under 35 words: one honest sentence on the result, then the single most valuable thing to fix first and why, then one concrete next step. Plain text, no LaTeX, no lists. If time ran out or questions were blank, address pacing.`,
       [{ role: 'user', content: `Result ${score}/${qs.length}. Time used ${used}s of ${SECS}s.\n` + qs.map((q, k) => `${q.main}: ${oks[k] ? 'correct' : picks[k] ? 'wrong' : 'left blank'}`).join('\n') }],
       txt => { const el = $('#rev'); if (el) el.innerHTML = rich(txt); }).catch(() => { const el = $('#rev'); if (el) el.textContent = 'Review the questions below, starting with the ones you missed.'; });
   }
