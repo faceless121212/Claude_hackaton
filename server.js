@@ -66,7 +66,8 @@ async function chat(req, res) {
           body: JSON.stringify({ model: MODEL, messages: [{ role: 'system', content: system }, ...messages], max_tokens, stream, reasoning: { effort: 'low' } }),
         });
   } catch (e) { return void fail(502, 'Cannot reach the model: ' + e.message); }
-  if (!up.ok) return void fail(502, `Model error ${up.status}`, (await up.text()).slice(0, 400));
+  if (!up.ok) return void fail(502, up.status === 401 || up.status === 403 ? 'The API key was rejected. Check the key in .env or keys.txt and restart.'
+    : `The model is not responding (error ${up.status}).`, (await up.text()).slice(0, 400));
 
   if (!stream) {
     const j = await up.json();
@@ -98,7 +99,8 @@ async function chat(req, res) {
 
 http.createServer((req, res) => {
   if (req.method === 'POST' && req.url === '/api/chat') return void chat(req, res).catch(e => { try { res.writeHead(500).end(String(e)); } catch {} });
-  const urlPath = decodeURIComponent(req.url.split('?')[0]);
+  let urlPath;
+  try { urlPath = decodeURIComponent(req.url.split('?')[0]); } catch { return void res.writeHead(400).end('Bad request'); }
   const file = path.join(__dirname, 'public', path.normalize(urlPath === '/' ? '/index.html' : urlPath));
   if (!file.startsWith(path.join(__dirname, 'public'))) return void res.writeHead(403).end();
   fs.readFile(file, (err, data) => {
